@@ -1,0 +1,33 @@
+Corosync-qdevice
+----------------
+corosync-qdevice is a daemon running on each node of a cluster. It provides
+a configured number of votes to the quorum subsystem based on a third-party
+arbitrator's decision. Its primary use is to allow a cluster to sustain more
+node failures than standard quorum rules allow. It is recommended for clusters
+with an even number of nodes and highly recommended for 2 node clusters.
+
+corosync-qnetd is a daemon running outside of the cluster with the purpose
+of providing a vote to the corosync-qdevice model net. It's designed to
+support multiple clusters and be almost configuration and state free.
+New clusters are handled dynamically and no configuration file exists.
+It's also able to run as non-root user - which is recommended.
+Connection between the corosync-qdevice model net client can be optionally
+configured with TLS client certificate checking. The communication protocol
+between server and client is designed to be very simple and allow
+backwards compatibility.
+
+Originally both qdevice and qnetd were part of the Corosync codebase
+(https://github.com/corosync/corosync) but because it's got quite big we
+decided to split it into it's own sub project.
+
+Dependencies
+------------
+* Corosync >= 2.0
+* NSS
+
+Installation
+------------
+$ ./autogen.sh
+$ ./configure
+$ make
+$ sudo make install
