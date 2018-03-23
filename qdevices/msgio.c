@@ -41,9 +41,18 @@ ssize_t
 msgio_send(PRFileDesc *sock, const char *msg, size_t msg_len, size_t *start_pos)
 {
 	ssize_t sent_bytes;
+	PRInt32 to_send_i32;
+	size_t to_send;
+
+	to_send = msg_len - *start_pos;
+	if (to_send > PR_INT32_MAX) {
+		to_send_i32 = PR_INT32_MAX;
+	} else {
+		to_send_i32 = (PRInt32)to_send;
+	}
 
 	if ((sent_bytes = PR_Send(sock, msg + *start_pos,
-	    msg_len - *start_pos, 0, PR_INTERVAL_NO_TIMEOUT)) != -1) {
+	    to_send_i32, 0, PR_INTERVAL_NO_TIMEOUT)) != -1) {
 		*start_pos += sent_bytes;
 	}
 
@@ -96,18 +105,21 @@ int
 msgio_write(PRFileDesc *sock, const struct dynar *msg, size_t *already_sent_bytes)
 {
 	PRInt32 sent;
-	PRInt32 to_send;
+	PRInt32 to_send_i32;
+	size_t to_send;
 
 	to_send = dynar_size(msg) - *already_sent_bytes;
 	if (to_send > MSGIO_LOCAL_BUF_SIZE) {
-		to_send = MSGIO_LOCAL_BUF_SIZE;
+		to_send_i32 = MSGIO_LOCAL_BUF_SIZE;
+	} else {
+		to_send_i32 = (PRInt32)to_send;
 	}
 
-	sent = PR_Send(sock, dynar_data(msg) + *already_sent_bytes, to_send, 0,
+	sent = PR_Send(sock, dynar_data(msg) + *already_sent_bytes, to_send_i32, 0,
 	    PR_INTERVAL_NO_TIMEOUT);
 
 	if (sent > 0) {
-		*already_sent_bytes += sent;
+		*already_sent_bytes += (size_t)sent;
 
 		if (*already_sent_bytes == dynar_size(msg)) {
 			/*
@@ -143,7 +155,8 @@ msgio_read(PRFileDesc *sock, struct dynar *msg, size_t *already_received_bytes, 
 {
 	char local_read_buffer[MSGIO_LOCAL_BUF_SIZE];
 	PRInt32 readed;
-	PRInt32 to_read;
+	size_t to_read;
+	PRInt32 to_read_i32;
 	int ret;
 
 	ret = 0;
@@ -161,12 +174,14 @@ msgio_read(PRFileDesc *sock, struct dynar *msg, size_t *already_received_bytes, 
 	}
 
 	if (to_read > MSGIO_LOCAL_BUF_SIZE) {
-		to_read = MSGIO_LOCAL_BUF_SIZE;
+		to_read_i32 = MSGIO_LOCAL_BUF_SIZE;
+	} else {
+		to_read_i32 = (PRInt32)to_read;
 	}
 
-	readed = PR_Recv(sock, local_read_buffer, to_read, 0, PR_INTERVAL_NO_TIMEOUT);
+	readed = PR_Recv(sock, local_read_buffer, to_read_i32, 0, PR_INTERVAL_NO_TIMEOUT);
 	if (readed > 0) {
-		*already_received_bytes += readed;
+		*already_received_bytes += (size_t)readed;
 
 		if (!*skipping_msg) {
 			if (dynar_cat(msg, local_read_buffer, readed) == -1) {
