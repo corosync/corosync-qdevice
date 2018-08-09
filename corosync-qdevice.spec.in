@@ -34,6 +34,7 @@ Requires(preun): /sbin/chkconfig
 %endif
 
 # Build bits
+BuildRequires: gcc
 BuildRequires: corosynclib-devel
 BuildRequires: groff
 BuildRequires: libqb-devel
