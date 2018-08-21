@@ -36,10 +36,20 @@ Requires(preun): /sbin/chkconfig
 # Build bits
 BuildRequires: gcc
 BuildRequires: corosynclib-devel
-BuildRequires: groff
 BuildRequires: libqb-devel
-BuildRequires: nss-devel
 BuildRequires: sed
+
+%if 0%{?suse_version}
+BuildRequires: groff-full
+%else
+BuildRequires: groff
+%endif
+
+%if 0%{?suse_version}
+BuildRequires: mozilla-nss-devel
+%else
+BuildRequires: nss-devel
+%endif
 
 %if %{with runautogen}
 BuildRequires: autoconf automake libtool
