@@ -9,6 +9,7 @@ After=network-online.target
 EnvironmentFile=-@INITCONFIGDIR@/corosync-qnetd
 ExecStart=@BINDIR@/corosync-qnetd -f $COROSYNC_QNETD_OPTIONS
 Type=notify
+StandardError=null
 Restart=on-abnormal
 # Uncomment and set user who should be used for executing qnetd
 #User=coroqnetd
