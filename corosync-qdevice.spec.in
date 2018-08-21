@@ -70,7 +70,8 @@ BuildRequires: autoconf automake libtool
 	--enable-qdevices \
 	--enable-qnetd \
 	--with-initddir=%{_initrddir} \
-	--with-systemddir=%{_unitdir}
+	--with-systemddir=%{_unitdir} \
+	--docdir=%{_docdir}
 
 make %{_smp_mflags}
 
