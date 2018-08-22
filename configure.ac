@@ -25,8 +25,6 @@ AC_CANONICAL_HOST
 
 AC_LANG([C])
 
-AC_SUBST(WITH_LIST, [""])
-
 dnl Fix default variables - "prefix" variable if not specified
 if test "$prefix" = "NONE"; then
 	prefix="/usr"
@@ -199,7 +197,6 @@ if test "x${enable_systemd}" = xyes; then
 	PKG_CHECK_MODULES([libsystemd], [libsystemd])
 	AC_DEFINE([HAVE_LIBSYSTEMD], [1], [have systemd interface library])
 	PACKAGE_FEATURES="$PACKAGE_FEATURES systemd"
-        WITH_LIST="$WITH_LIST --with systemd"
 fi
 if test "x${enable_qdevices}" = xyes; then
 	PACKAGE_FEATURES="$PACKAGE_FEATURES qdevices"
