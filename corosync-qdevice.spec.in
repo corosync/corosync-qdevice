@@ -5,8 +5,8 @@
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
-%bcond_with runautogen
-%bcond_with systemd
+%@bcond_runautogen@ runautogen
+%@bcond_systemd@ systemd
 
 %global gitver %{?numcomm:.%{numcomm}}%{?alphatag:.%{alphatag}}%{?dirty:.%{dirty}}
 %global gittarver %{?numcomm:.%{numcomm}}%{?alphatag:-%{alphatag}}%{?dirty:-%{dirty}}

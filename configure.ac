@@ -139,7 +139,7 @@ AC_ARG_ENABLE([secure-build],
 	[enable_secure_build="yes"])
 
 AC_ARG_ENABLE([systemd],
-	      [  --enable-systemd                : Install systemd service files],,
+	      [  --enable-systemd                : Build with libsystemd and install systemd service files],,
 	[ enable_systemd="no" ])
 AM_CONDITIONAL(INSTALL_SYSTEMD, test x$enable_systemd = xyes)
 
@@ -161,13 +161,17 @@ AC_ARG_WITH([systemddir],
 	[ SYSTEMDDIR="/lib/systemd/system" ])
 
 AC_ARG_ENABLE([qdevices],
-	[  --disable-qdevices               : Quorum devices support ],,
+	[  --disable-qdevices              : Quorum devices support ],,
 	[ enable_qdevices="yes" ])
 AM_CONDITIONAL(BUILD_QDEVICES, test x$enable_qdevices = xyes)
 AC_ARG_ENABLE([qnetd],
-	[  --disable-qnetd                  : Quorum Net Daemon support ],,
+	[  --disable-qnetd                 : Quorum Net Daemon support ],,
 	[ enable_qnetd="yes" ])
 AM_CONDITIONAL(BUILD_QNETD, test x$enable_qnetd = xyes)
+AC_ARG_ENABLE([runautogen],
+	[  --enable-runautogen             : run autogen.sh (RPM specfile)],,
+	[ enable_runautogen="no" ])
+AM_CONDITIONAL([BUILD_RUNAUTOGEN], [test x$enable_runautogen = xyes])
 
 # *FLAGS handling goes here
 

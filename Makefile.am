@@ -109,7 +109,17 @@ $(SPEC): $(SPEC).in
 		-e "s#@NUMCOMM@#$$numcomm#g" \
 		-e "s#@DIRTY@#$$dirty#g" \
 		-e "s#@date@#$$date#g" \
-	$< > $@-t; \
+	$< > $@-t
+if BUILD_RUNAUTOGEN
+	sed -i -e "s#@bcond_runautogen@#bcond_without#g" $@-t
+else
+	sed -i -e "s#@bcond_runautogen@#bcond_with#g" $@-t
+endif
+if INSTALL_SYSTEMD
+	sed -i -e "s#@bcond_systemd@#bcond_without#g" $@-t
+else
+	sed -i -e "s#@bcond_systemd@#bcond_with#g" $@-t
+endif
 	chmod a-w $@-t
 	mv $@-t $@
 
