@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2018 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -64,7 +64,7 @@ signal_int_handler(int sig)
 static void
 signal_term_handler(int sig)
 {
-	qdevice_log(LOG_DEBUG, "SIGTERM received - closing server socket");
+	qdevice_log(LOG_DEBUG, "SIGTERM received - closing local unix socket");
 	qdevice_ipc_close(global_instance);
 }
 
@@ -178,6 +178,7 @@ main(int argc, char * const argv[])
 	int force_debug;
 	int lock_file;
 	int another_instance_running;
+	int model_run_res;
 
 	if (qdevice_advanced_settings_init(&advanced_settings) != 0) {
 		errx(1, "Can't alloc memory for advanced settings");
@@ -265,14 +266,13 @@ main(int argc, char * const argv[])
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify (0, "READY=1");
 #endif
-	if (qdevice_model_run(&instance) != 0) {
-		return (1);
-	}
+	model_run_res = qdevice_model_run(&instance);
 
 	qdevice_log(LOG_DEBUG, "Removing cmap tracking");
-	if (qdevice_cmap_del_track(&instance) != 0) {
-		return (1);
-	}
+	/*
+	 * Ignore error intentionally
+	 */
+	(void)qdevice_cmap_del_track(&instance);
 
 	qdevice_log(LOG_DEBUG, "Destroying qdevice model");
 	qdevice_model_destroy(&instance);
@@ -294,5 +294,5 @@ main(int argc, char * const argv[])
 
 	qdevice_advanced_settings_destroy(&advanced_settings);
 
-	return (0);
+	return (model_run_res == 0 ? 0 : 2);
 }
