@@ -83,10 +83,10 @@ make install DESTDIR=%{buildroot}
 rm -rf %{buildroot}%{_docdir}/*
 mkdir -p %{buildroot}%{_sysconfdir}/sysconfig
 # /etc/sysconfig/corosync-qdevice
-install -m 644 init/corosync-qdevice.sysconfig.example \
+install -p -m 644 init/corosync-qdevice.sysconfig.example \
    %{buildroot}%{_sysconfdir}/sysconfig/corosync-qdevice
 # /etc/sysconfig/corosync-qnetd
-install -m 644 init/corosync-qnetd.sysconfig.example \
+install -p -m 644 init/corosync-qnetd.sysconfig.example \
    %{buildroot}%{_sysconfdir}/sysconfig/corosync-qnetd
 
 %if %{with systemd}
@@ -126,6 +126,7 @@ fi
 %endif
 
 %files
+%license LICENSE
 %dir %{_sysconfdir}/corosync/qdevice
 %dir %config(noreplace) %{_sysconfdir}/corosync/qdevice/net
 %dir %{_localstatedir}/run/corosync-qdevice
@@ -186,6 +187,7 @@ fi
 %endif
 
 %files -n corosync-qnetd
+%license LICENSE
 %dir %config(noreplace) %attr(770, coroqnetd, coroqnetd) %{_sysconfdir}/corosync/qnetd
 %dir %attr(770, coroqnetd, coroqnetd) %{_localstatedir}/run/corosync-qnetd
 %{_bindir}/corosync-qnetd
