@@ -5,6 +5,7 @@
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
+%@bcond_userflags@ userflags
 %@bcond_runautogen@ runautogen
 %@bcond_systemd@ systemd
 
@@ -64,6 +65,9 @@ BuildRequires: autoconf automake libtool
 %endif
 
 %{configure} \
+%if %{with userflags}
+	--enable-user-flags \
+%endif
 %if %{with systemd}
 	--enable-systemd \
 %endif

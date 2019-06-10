@@ -110,6 +110,11 @@ $(SPEC): $(SPEC).in
 		-e "s#@DIRTY@#$$dirty#g" \
 		-e "s#@date@#$$date#g" \
 	$< > $@-t
+if BUILD_USERFLAGS
+	sed -i -e "s#@bcond_userflags@#bcond_without#g" $@-t
+else
+	sed -i -e "s#@bcond_userflags@#bcond_with#g" $@-t
+endif
 if BUILD_RUNAUTOGEN
 	sed -i -e "s#@bcond_runautogen@#bcond_without#g" $@-t
 else

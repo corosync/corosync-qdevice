@@ -136,6 +136,11 @@ AC_ARG_ENABLE([secure-build],
 	[],
 	[enable_secure_build="yes"])
 
+AC_ARG_ENABLE([user-flags],
+	[  --enable-user-flags             : rely on user environment. ],
+	[ default="no" ])
+AM_CONDITIONAL(BUILD_USERFLAGS, test x$enable_user_flags = xyes)
+
 AC_ARG_ENABLE([systemd],
 	      [  --enable-systemd                : Build with libsystemd and install systemd service files],,
 	[ enable_systemd="no" ])
@@ -242,6 +247,13 @@ if test "x${enable_fatal_warnings}" = xyes && \
 	PACKAGE_FEATURES="$PACKAGE_FEATURES fatal-warnings"
 else
 	WERROR_CFLAGS=""
+fi
+
+# don't add addtional cflags
+if test "x${enable_user_flags}" = xyes; then
+	OPT_CFLAGS=""
+	GDB_FLAGS=""
+	EXTRA_WARNINGS=""
 fi
 
 if test "x${enable_secure_build}" = xyes; then
@@ -358,7 +370,7 @@ AC_MSG_RESULT([  Features                 = ${PACKAGE_FEATURES}])
 AC_MSG_RESULT([])
 AC_MSG_RESULT([$PACKAGE build info:])
 AC_MSG_RESULT([  Default optimization     = ${OPT_CFLAGS}])
-AC_MSG_RESULT([  Default debug options    = ${GDB_CFLAGS}])
+AC_MSG_RESULT([  Default debug options    = ${GDB_FLAGS}])
 AC_MSG_RESULT([  Extra compiler warnings  = ${EXTRA_WARNING}])
 AC_MSG_RESULT([  Env. defined CFLAG       = ${ENV_CFLAGS}])
 AC_MSG_RESULT([  Env. defined CPPFLAGS    = ${ENV_CPPFLAGS}])
