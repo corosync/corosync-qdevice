@@ -92,7 +92,6 @@ AC_TYPE_SSIZE_T
 
 # Checks for libraries.
 PKG_CHECK_MODULES([nss],[nss])
-PKG_CHECK_MODULES([qb], [libqb])
 PKG_CHECK_MODULES([corosync_common], [libcorosync_common])
 PKG_CHECK_MODULES([cmap], [libcmap])
 PKG_CHECK_MODULES([votequorum], [libvotequorum])
