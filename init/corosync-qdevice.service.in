@@ -10,7 +10,7 @@ EnvironmentFile=-@INITCONFIGDIR@/corosync-qdevice
 ExecStart=@SBINDIR@/corosync-qdevice -f $COROSYNC_QDEVICE_OPTIONS
 Type=notify
 StandardError=null
-Restart=on-abnormal
+Restart=on-failure
 RuntimeDirectory=corosync-qdevice
 RuntimeDirectoryMode=0770
 
