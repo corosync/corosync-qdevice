@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -558,7 +558,7 @@ qdevice_net_msg_received_node_list_reply(struct qdevice_net_instance *instance,
 	if (str == NULL) {
 		log(LOG_CRIT, "qdevice_net_msg_received_node_list_reply fatal error. "
 		    "Unhandled node_list_type (debug output)");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Received %s node list reply", str);
@@ -607,7 +607,7 @@ qdevice_net_msg_received_node_list_reply(struct qdevice_net_instance *instance,
 	if (!case_processed) {
 		log(LOG_CRIT, "qdevice_net_msg_received_node_list_reply fatal error. "
 		    "Unhandled node_list_type (algorithm call)");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (res != 0) {

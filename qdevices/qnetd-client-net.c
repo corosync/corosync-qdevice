@@ -244,7 +244,7 @@ qnetd_client_net_read(struct qnetd_instance *instance, struct qnetd_client *clie
 		break;
 	default:
 		log(LOG_ERR, "Unhandled msgio_read error %d\n", res);
-		exit(1);
+		exit(EXIT_FAILURE);
 		break;
 	}
 

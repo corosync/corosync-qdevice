@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -114,7 +114,7 @@ qdevice_net_socket_read(struct qdevice_net_instance *instance)
 			}
 		} else {
 			log(LOG_CRIT, "net_socket_read in skipping msg state");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 
 		instance->skipping_msg = 0;
@@ -123,7 +123,7 @@ qdevice_net_socket_read(struct qdevice_net_instance *instance)
 		break;
 	default:
 		log(LOG_CRIT, "qdevice_net_socket_read unhandled error %d", res);
-		exit(1);
+		exit(EXIT_FAILURE);
 		break;
 	}
 

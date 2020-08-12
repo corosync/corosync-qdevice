@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -224,11 +224,11 @@ qdevice_cmap_init(struct qdevice_instance *instance)
 	}
 
 	if (res != CS_OK) {
-		errx(1, "Failed to initialize the cmap API. Error %s", cs_strerror(res));
+		errx(EXIT_FAILURE, "Failed to initialize the cmap API. Error %s", cs_strerror(res));
 	}
 
 	if ((res = cmap_context_set(instance->cmap_handle, (void *)instance)) != CS_OK) {
-		errx(1, "Can't set cmap context. Error %s", cs_strerror(res));
+		errx(EXIT_FAILURE, "Can't set cmap context. Error %s", cs_strerror(res));
 	}
 
 	cmap_fd_get(instance->cmap_handle, &instance->cmap_poll_fd);
@@ -247,7 +247,7 @@ qdevice_cmap_node_list_event(struct qdevice_instance *instance)
 
 		if (qdevice_model_get_config_node_list_failed(instance) != 0) {
 			log(LOG_DEBUG, "qdevice_model_get_config_node_list_failed returned error -> exit");
-			exit(2);
+			exit(EXIT_FAILURE);
 		}
 
 		return ;
@@ -269,7 +269,7 @@ qdevice_cmap_node_list_event(struct qdevice_instance *instance)
 	if (qdevice_model_config_node_list_changed(instance, &nlist,
 	    config_version_set, config_version) != 0) {
 		log(LOG_DEBUG, "qdevice_model_config_node_list_changed returned error -> exit");
-		exit(2);
+		exit(EXIT_FAILURE);
 	}
 
 	node_list_free(&instance->config_node_list);
@@ -280,7 +280,7 @@ qdevice_cmap_node_list_event(struct qdevice_instance *instance)
 
 		if (qdevice_model_get_config_node_list_failed(instance) != 0) {
 			log(LOG_DEBUG, "qdevice_model_get_config_node_list_failed returned error -> exit");
-			exit(2);
+			exit(EXIT_FAILURE);
 		}
 
 		return ;
@@ -308,7 +308,7 @@ qdevice_cmap_heuristics_event(struct qdevice_instance *instance)
 	log(LOG_DEBUG, "Heuristics configuration possibly changed");
 	if (qdevice_instance_configure_from_cmap_heuristics(instance) != 0) {
 		log(LOG_DEBUG, "qdevice_instance_configure_from_cmap_heuristics returned error -> exit");
-		exit(2);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -333,7 +333,7 @@ qdevice_cmap_reload_cb(cmap_handle_t cmap_handle, cmap_track_handle_t cmap_track
 
 	if (cmap_context_get(cmap_handle, (const void **)&instance) != CS_OK) {
 		log(LOG_ERR, "Fatal error. Can't get cmap context");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/*
@@ -394,7 +394,7 @@ qdevice_cmap_reload_cb(cmap_handle_t cmap_handle, cmap_track_handle_t cmap_track
 	 */
 	if (qdevice_model_cmap_changed(instance, &events) != 0) {
 		log(LOG_DEBUG, "qdevice_model_cmap_changed returned error -> exit");
-		exit(2);
+		exit(EXIT_FAILURE);
 	}
 }
 

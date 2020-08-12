@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -147,7 +147,7 @@ qnetd_algo_ffsplit_is_preferred_partition(const struct qnetd_client *client,
 	if (!case_processed) {
 		log(LOG_CRIT, "qnetd_algo_ffsplit_is_preferred_partition unprocessed "
 		    "tie_breaker.mode");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	return (node_list_find_node_id(membership_node_list, preferred_node_id) != NULL);
@@ -422,7 +422,7 @@ qnetd_algo_ffsplit_partition_cmp(const struct qnetd_client *client1,
 exit_res:
 	if (res == -1) {
 		log(LOG_CRIT, "qnetd_algo_ffsplit_partition_cmp unhandled case");
-		exit(1);
+		exit(EXIT_FAILURE);
 		/* NOTREACHED */
 	}
 

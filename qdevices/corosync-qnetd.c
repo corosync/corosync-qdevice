@@ -79,7 +79,7 @@ qnetd_err_nss(void)
 
 	log_nss(LOG_CRIT, "NSS error");
 
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 static void
@@ -212,7 +212,7 @@ cli_parse_long_opt(struct qnetd_advanced_settings *advanced_settings, const char
 
 	dynar_init(&dynar_long_opt, strlen(long_opt) + 1);
 	if (dynar_str_cpy(&dynar_long_opt, long_opt) != 0) {
-		errx(1, "Can't alloc memory for long option");
+		errx(EXIT_FAILURE, "Can't alloc memory for long option");
 	}
 
 	dynar_getopt_lex_init(&lex, &dynar_long_opt);
@@ -224,10 +224,10 @@ cli_parse_long_opt(struct qnetd_advanced_settings *advanced_settings, const char
 		res = qnetd_advanced_settings_set(advanced_settings, opt, val);
 		switch (res) {
 		case -1:
-			errx(1, "Unknown option '%s'", opt);
+			errx(EXIT_FAILURE, "Unknown option '%s'", opt);
 			break;
 		case -2:
-			errx(1, "Invalid value '%s' for option '%s'", val, opt);
+			errx(EXIT_FAILURE, "Invalid value '%s' for option '%s'", val, opt);
 			break;
 		}
 	}
@@ -274,26 +274,26 @@ cli_parse(int argc, char * const argv[], char **host_addr, uint16_t *host_port, 
 			break;
 		case 'c':
 			if ((*client_cert_required = utils_parse_bool_str(optarg)) == -1) {
-				errx(1, "client_cert_required should be on/yes/1, off/no/0");
+				errx(EXIT_FAILURE, "client_cert_required should be on/yes/1, off/no/0");
 			}
 			break;
 		case 'l':
 			free(*host_addr);
 			*host_addr = strdup(optarg);
 			if (*host_addr == NULL) {
-				errx(1, "Can't alloc memory for host addr string");
+				errx(EXIT_FAILURE, "Can't alloc memory for host addr string");
 			}
 			break;
 		case 'm':
 			if (utils_strtonum(optarg, 0, LLONG_MAX, &tmpll) == -1) {
-				errx(1, "max clients value %s is invalid", optarg);
+				errx(EXIT_FAILURE, "max clients value %s is invalid", optarg);
 			}
 
 			*max_clients = (size_t)tmpll;
 			break;
 		case 'p':
 			if (utils_strtonum(optarg, 1, UINT16_MAX, &tmpll) == -1) {
-				errx(1, "host port must be in range 1-%u", UINT16_MAX);
+				errx(EXIT_FAILURE, "host port must be in range 1-%u", UINT16_MAX);
 			}
 
 			*host_port = tmpll;
@@ -309,17 +309,17 @@ cli_parse(int argc, char * const argv[], char **host_addr, uint16_t *host_port, 
 			} else if (strcasecmp(optarg, "req") == 0) {
 				*tls_supported = TLV_TLS_REQUIRED;
 			} else {
-				errx(1, "tls must be one of on, off, req");
+				errx(EXIT_FAILURE, "tls must be one of on, off, req");
 			}
 			break;
 		case 'v':
 			display_version();
-			exit(1);
+			exit(EXIT_FAILURE);
 			break;
 		case 'h':
 		case '?':
 			usage();
-			exit(1);
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
@@ -345,7 +345,7 @@ main(int argc, char * const argv[])
 	int poll_res;
 
 	if (qnetd_advanced_settings_init(&advanced_settings) != 0) {
-		errx(1, "Can't alloc memory for advanced settings");
+		errx(EXIT_FAILURE, "Can't alloc memory for advanced settings");
 	}
 
 	cli_parse(argc, argv, &host_addr, &host_port, &foreground, &debug_log, &bump_log_priority,
@@ -357,7 +357,7 @@ main(int argc, char * const argv[])
 	}
 
 	if (log_init(QNETD_PROGRAM_NAME, log_target, LOG_DAEMON) == -1) {
-		errx(1, "Can't initialize logging");
+		errx(EXIT_FAILURE, "Can't initialize logging");
 	}
 
 	log_set_debug(debug_log);
@@ -370,7 +370,7 @@ main(int argc, char * const argv[])
 	    advanced_settings.nss_db_dir : NULL)) != 0) {
 		log_err(LOG_ERR, "Can't open NSS DB directory");
 
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	/*
@@ -388,7 +388,7 @@ main(int argc, char * const argv[])
 			log_err(LOG_ERR, "Can't acquire lock");
 		}
 
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Initializing nss");
@@ -404,7 +404,7 @@ main(int argc, char * const argv[])
 	if (qnetd_instance_init(&instance, tls_supported, client_cert_required,
 	    max_clients, &advanced_settings) == -1) {
 		log(LOG_ERR, "Can't initialize qnetd");
-		return (1);
+		return (EXIT_FAILURE);
 	}
 	instance.host_addr = host_addr;
 	instance.host_port = host_port;
@@ -415,7 +415,7 @@ main(int argc, char * const argv[])
 
 	log(LOG_DEBUG, "Initializing local socket");
 	if (qnetd_ipc_init(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Creating listening socket");
@@ -442,7 +442,7 @@ main(int argc, char * const argv[])
 	    &instance, NULL) != 0) {
 		log(LOG_ERR, "Can't add server socket to main poll loop");
 
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	global_instance = &instance;
@@ -450,7 +450,7 @@ main(int argc, char * const argv[])
 
 	log(LOG_DEBUG, "Registering algorithms");
 	if (qnetd_algorithm_register_all() != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "QNetd ready to provide service");
@@ -467,7 +467,7 @@ main(int argc, char * const argv[])
 
 	if (poll_res == -2) {
 		log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	/*
@@ -503,5 +503,5 @@ main(int argc, char * const argv[])
 	log(LOG_DEBUG, "Closing log");
 	log_close();
 
-	return (0);
+	return (EXIT_SUCCESS);
 }

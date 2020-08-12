@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -95,7 +95,7 @@ qnetd_client_msg_received_check_tls(struct qnetd_instance *instance, struct qnet
 
 	if (!case_processed) {
 		log(LOG_ERR, "Unhandled instance tls supported %u", instance->tls_supported);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (tls_required && !client->tls_started) {
@@ -756,7 +756,7 @@ qnetd_client_msg_received_node_list(struct qnetd_instance *instance, struct qnet
 	if (!case_processed) {
 		log(LOG_ERR, "qnetd_client_msg_received_node_list fatal error. "
 		    "Unhandled node_list_type");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (reply_error_code != TLV_REPLY_ERROR_CODE_NO_ERROR) {
@@ -824,7 +824,7 @@ qnetd_client_msg_received_node_list(struct qnetd_instance *instance, struct qnet
 	if (!case_processed) {
 		log(LOG_ERR, "qnetd_client_msg_received_node_list fatal error. "
 		    "Unhandled node_list_type");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	/*

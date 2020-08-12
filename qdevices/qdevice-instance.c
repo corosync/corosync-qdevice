@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -238,7 +238,7 @@ qdevice_instance_configure_from_cmap_heuristics(struct qdevice_instance *instanc
 
 	} else {
 		log(LOG_CRIT, "Undefined heuristics mode");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (send_exec_list) {

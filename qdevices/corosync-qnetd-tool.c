@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -56,7 +56,7 @@ enum qnetd_tool_operation {
 };
 
 enum qnetd_tool_exit_code {
-	QNETD_TOOL_EXIT_CODE_NO_ERROR = 0,
+	QNETD_TOOL_EXIT_CODE_NO_ERROR = EXIT_SUCCESS,
 	QNETD_TOOL_EXIT_CODE_USAGE = 1,
 	QNETD_TOOL_EXIT_CODE_INTERNAL_ERROR = 2,
 	QNETD_TOOL_EXIT_CODE_SOCKET_CONNECT = 3,

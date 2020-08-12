@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Red Hat, Inc.
+ * Copyright (c) 2017-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -52,7 +52,7 @@ qdevice_net_heuristics_exec_result_to_tlv(enum qdevice_heuristics_exec_result ex
 		log(LOG_ERR, "qdevice_net_heuristics_exec_result_to_tlv: Unhandled "
 		    "heuristics exec result %s",
 		    qdevice_heuristics_exec_result_to_str(exec_result));
-		exit(1);
+		exit(EXIT_FAILURE);
 		break;
 	}
 

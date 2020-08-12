@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -260,12 +260,12 @@ process_list_entry_exec_helper_set_stdfd(void)
 
 	devnull = open("/dev/null", O_RDWR);
 	if (devnull == -1) {
-		err(1, "Can't open /dev/null");
+		err(EXIT_FAILURE, "Can't open /dev/null");
 	}
 
 	if (dup2(devnull, 0) < 0 || dup2(devnull, 1) < 0 || dup2(devnull, 2) < 0) {
 		close(devnull);
-		err(1, "Can't dup2 stdin/out/err to /dev/null");
+		err(EXIT_FAILURE, "Can't dup2 stdin/out/err to /dev/null");
 	}
 
 	close(devnull);
@@ -295,7 +295,7 @@ process_list_entry_exec(const struct process_list *plist, struct process_list_en
 		/*
 		 * Exec returned -> exec failed
 		 */
-		err(1, "Can't execute command %s (%s)", entry->name, entry->exec_argv[0]);
+		err(EXIT_FAILURE, "Can't execute command %s (%s)", entry->name, entry->exec_argv[0]);
 	} else {
 		entry->pid = pid;
 		entry->state = PROCESS_LIST_ENTRY_STATE_RUNNING;

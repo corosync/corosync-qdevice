@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -59,42 +59,42 @@ qdevice_heuristics_init(struct qdevice_heuristics_instance *instance,
 	pid_t pid;
 
 	if (pipe(pipe_cmd_in) != 0) {
-		err(1, "Can't create command input pipe");
+		err(EXIT_FAILURE, "Can't create command input pipe");
 	}
 
 	if (pipe(pipe_cmd_out) != 0) {
-		err(1, "Can't create command output pipe");
+		err(EXIT_FAILURE, "Can't create command output pipe");
 	}
 
 	if (pipe(pipe_log_out) != 0) {
-		err(1, "Can't create logging output pipe");
+		err(EXIT_FAILURE, "Can't create logging output pipe");
 	}
 
 	pid = fork();
 	if (pid == -1) {
-		err(1, "Can't create child process");
+		err(EXIT_FAILURE, "Can't create child process");
 	} else if (pid == 0) {
 		/*
 		 * Child
 		 */
 		(void)setsid();
 		if (dup2(pipe_cmd_in[0], 0) == -1) {
-			err(1, "Can't dup2 command input pipe");
+			err(EXIT_FAILURE, "Can't dup2 command input pipe");
 		}
 		close(pipe_cmd_in[1]);
 		close(pipe_cmd_in[0]);
 		if (utils_fd_set_non_blocking(0) == -1) {
-			err(1, "Can't set non blocking flag on command input pipe");
+			err(EXIT_FAILURE, "Can't set non blocking flag on command input pipe");
 		}
 
 		if (dup2(pipe_cmd_out[1], 1) == -1) {
-			err(1, "Can't dup2 command output pipe");
+			err(EXIT_FAILURE, "Can't dup2 command output pipe");
 		}
 		close(pipe_cmd_out[0]);
 		close(pipe_cmd_out[1]);
 
 		if (dup2(pipe_log_out[1], 2) == -1) {
-			err(1, "Can't dup2 logging output pipe");
+			err(EXIT_FAILURE, "Can't dup2 logging output pipe");
 		}
 		close(pipe_log_out[0]);
 		close(pipe_log_out[1]);
@@ -105,7 +105,7 @@ qdevice_heuristics_init(struct qdevice_heuristics_instance *instance,
 
 		qdevice_advanced_settings_destroy(advanced_settings);
 
-		exit(0);
+		exit(EXIT_SUCCESS);
 	} else {
 		close(pipe_cmd_in[0]);
 		close(pipe_cmd_out[1]);
@@ -115,15 +115,15 @@ qdevice_heuristics_init(struct qdevice_heuristics_instance *instance,
 
 		instance->pipe_cmd_send = pipe_cmd_in[1];
 		if (utils_fd_set_non_blocking(instance->pipe_cmd_send) == -1) {
-			err(1, "Can't set non blocking flag on command input pipe");
+			err(EXIT_FAILURE, "Can't set non blocking flag on command input pipe");
 		}
 		instance->pipe_cmd_recv = pipe_cmd_out[0];
 		if (utils_fd_set_non_blocking(instance->pipe_cmd_recv) == -1) {
-			err(1, "Can't set non blocking flag on command output pipe");
+			err(EXIT_FAILURE, "Can't set non blocking flag on command output pipe");
 		}
 		instance->pipe_log_recv = pipe_log_out[0];
 		if (utils_fd_set_non_blocking(instance->pipe_cmd_recv) == -1) {
-			err(1, "Can't set non blocking flag on logging output pipe");
+			err(EXIT_FAILURE, "Can't set non blocking flag on logging output pipe");
 		}
 		instance->worker_pid = pid;
 
@@ -311,7 +311,7 @@ qdevice_heuristics_wait_for_initial_exec_result(struct qdevice_heuristics_instan
 
 					if (!case_processed) {
 						log(LOG_CRIT, "Unhandled read on poll descriptor %u", i);
-						exit(1);
+						exit(EXIT_FAILURE);
 					}
 				}
 
@@ -336,7 +336,7 @@ qdevice_heuristics_wait_for_initial_exec_result(struct qdevice_heuristics_instan
 
 					if (!case_processed) {
 						log(LOG_CRIT, "Unhandled write on poll descriptor %u", i);
-						exit(1);
+						exit(EXIT_FAILURE);
 					}
 				}
 

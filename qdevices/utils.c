@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -160,12 +160,12 @@ utils_tty_detach(void)
 
 	switch (fork()) {
 		case -1:
-			err(1, "Can't create child process");
+			err(EXIT_FAILURE, "Can't create child process");
 			break;
 		case 0:
 			break;
 		default:
-			exit(0);
+			exit(EXIT_SUCCESS);
 			break;
 	}
 
@@ -177,13 +177,13 @@ utils_tty_detach(void)
 	 */
 	devnull = open("/dev/null", O_RDWR);
 	if (devnull == -1) {
-		err(1, "Can't open /dev/null");
+		err(EXIT_FAILURE, "Can't open /dev/null");
 	}
 
 	if (dup2(devnull, 0) < 0 || dup2(devnull, 1) < 0
 	    || dup2(devnull, 2) < 0) {
 		close(devnull);
-		err(1, "Can't dup2 stdin/out/err to /dev/null");
+		err(EXIT_FAILURE, "Can't dup2 stdin/out/err to /dev/null");
 	}
 	close(devnull);
 }

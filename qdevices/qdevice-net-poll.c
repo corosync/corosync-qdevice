@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -114,7 +114,7 @@ qdevice_net_poll_write_socket(struct qdevice_net_instance *instance, const PRPol
 			}
 		} else {
 			log(LOG_CRIT, "Unhandled nss_sock_non_blocking_client_succeeded");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	} else {
 		if (qdevice_net_socket_write(instance) == -1) {
@@ -404,7 +404,7 @@ qdevice_net_poll(struct qdevice_net_instance *instance)
 
 				if (!case_processed) {
 					log(LOG_CRIT, "Unhandled read on poll descriptor %zu", i);
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 			}
 
@@ -442,7 +442,7 @@ qdevice_net_poll(struct qdevice_net_instance *instance)
 
 				if (!case_processed) {
 					log(LOG_CRIT, "Unhandled write on poll descriptor %zu", i);
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 			}
 
@@ -461,7 +461,7 @@ qdevice_net_poll(struct qdevice_net_instance *instance)
 					if (pfds[i].out_flags != PR_POLL_NVAL) {
 						log(LOG_CRIT, "POLLERR (%u) on local socket",
 						    pfds[i].out_flags);
-						exit(1);
+						exit(EXIT_FAILURE);
 					} else {
 						log(LOG_DEBUG, "Local socket is closed");
 						instance->schedule_disconnect = 1;
@@ -512,7 +512,7 @@ qdevice_net_poll(struct qdevice_net_instance *instance)
 
 				if (!case_processed) {
 					log(LOG_CRIT, "Unhandled error on poll descriptor %zu", i);
-					exit(1);
+					exit(EXIT_FAILURE);
 				}
 			}
 

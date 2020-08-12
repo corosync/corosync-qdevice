@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -78,7 +78,7 @@ qdevice_net_cast_vote_timer_callback(void *data1, void *data2)
 	if (!case_processed) {
 		log(LOG_CRIT, "qdevice_net_timer_cast_vote: Unhandled cast_vote_timer_vote %u\n",
 		    instance->cast_vote_timer_vote);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if (qdevice_votequorum_poll(instance->qdevice_instance_ptr, cast_vote) != 0) {
@@ -129,7 +129,7 @@ qdevice_net_cast_vote_timer_update(struct qdevice_net_instance *instance, enum t
 	if (!case_processed) {
 		log(LOG_CRIT, "qdevice_net_cast_vote_timer_update_vote: Unhandled vote parameter %u\n",
 		    vote);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	instance->cast_vote_timer_vote = vote;

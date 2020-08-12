@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -118,7 +118,7 @@ cli_parse_long_opt(struct qdevice_advanced_settings *advanced_settings, const ch
 
 	dynar_init(&dynar_long_opt, strlen(long_opt) + 1);
 	if (dynar_str_cpy(&dynar_long_opt, long_opt) != 0) {
-		errx(1, "Can't alloc memory for long option");
+		errx(EXIT_FAILURE, "Can't alloc memory for long option");
 	}
 
 	dynar_getopt_lex_init(&lex, &dynar_long_opt);
@@ -130,10 +130,10 @@ cli_parse_long_opt(struct qdevice_advanced_settings *advanced_settings, const ch
 		res = qdevice_advanced_settings_set(advanced_settings, opt, val);
 		switch (res) {
 		case -1:
-			errx(1, "Unknown option '%s'", opt);
+			errx(EXIT_FAILURE, "Unknown option '%s'", opt);
 			break;
 		case -2:
-			errx(1, "Invalid value '%s' for option '%s'", val, opt);
+			errx(EXIT_FAILURE, "Invalid value '%s' for option '%s'", val, opt);
 			break;
 		}
 	}
@@ -169,7 +169,7 @@ cli_parse(int argc, char * const argv[], int *foreground, int *force_debug, int 
 		case 'h':
 		case '?':
 			usage();
-			exit(1);
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
@@ -188,7 +188,7 @@ main(int argc, char * const argv[])
 	int model_run_res;
 
 	if (qdevice_advanced_settings_init(&advanced_settings) != 0) {
-		errx(1, "Can't alloc memory for advanced settings");
+		errx(EXIT_FAILURE, "Can't alloc memory for advanced settings");
 	}
 
 	cli_parse(argc, argv, &foreground, &force_debug, &bump_log_priority, &advanced_settings);
@@ -200,7 +200,7 @@ main(int argc, char * const argv[])
 
 	qdevice_cmap_init(&instance);
 	if (qdevice_log_init(&instance, foreground, force_debug, bump_log_priority) == -1) {
-		errx(1, "Can't initialize logging");
+		errx(EXIT_FAILURE, "Can't initialize logging");
 	}
 
 	/*
@@ -218,7 +218,7 @@ main(int argc, char * const argv[])
 			log_err(LOG_ERR, "Can't acquire lock");
 		}
 
-		exit(1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Initializing votequorum");
@@ -226,7 +226,7 @@ main(int argc, char * const argv[])
 
 	log(LOG_DEBUG, "Initializing local socket");
 	if (qdevice_ipc_init(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Registering qdevice models");
@@ -234,38 +234,38 @@ main(int argc, char * const argv[])
 
 	log(LOG_DEBUG, "Configuring qdevice");
 	if (qdevice_instance_configure_from_cmap(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Configuring master_wins");
 	if (qdevice_votequorum_master_wins(&instance, (advanced_settings.master_wins ==
 	    QDEVICE_ADVANCED_SETTINGS_MASTER_WINS_FORCE_ON ? 1 : 0)) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Getting configuration node list");
 	if (qdevice_cmap_store_config_node_list(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Initializing qdevice model");
 	if (qdevice_model_init(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Initializing cmap tracking");
 	if (qdevice_cmap_add_track(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Waiting for ring id");
 	if (qdevice_votequorum_wait_for_ring_id(&instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Waiting for initial heuristics exec result");
 	if (qdevice_heuristics_wait_for_initial_exec_result(&instance.heuristics_instance) != 0) {
-		return (1);
+		return (EXIT_FAILURE);
 	}
 
 	global_instance = &instance;
@@ -303,5 +303,5 @@ main(int argc, char * const argv[])
 
 	qdevice_advanced_settings_destroy(&advanced_settings);
 
-	return (model_run_res == 0 ? 0 : 2);
+	return (model_run_res == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }

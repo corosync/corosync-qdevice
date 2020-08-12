@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -160,7 +160,7 @@ qdevice_ipc_cmd_vq_nodestate_to_str(uint32_t state)
 	default:
 		log(LOG_ERR, "qdevice_ipc_cmd_vq_nodestate_to_str: Unhandled votequorum "
 		    "node state %"PRIu32, state);
-		exit(1);
+		exit(EXIT_FAILURE);
 		break;
 	}
 
