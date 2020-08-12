@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -40,7 +40,6 @@
 #include "qnetd-algorithm.h"
 #include "qnetd-log-debug.h"
 #include "qnetd-dpd-timer.h"
-#include "qnetd-poll-array-user-data.h"
 #include "qnetd-client-algo-timer.h"
 
 int
@@ -53,7 +52,6 @@ qnetd_instance_init(struct qnetd_instance *instance,
 
 	instance->advanced_settings = advanced_settings;
 
-	pr_poll_array_init(&instance->poll_array, sizeof(struct qnetd_poll_array_user_data));
 	qnetd_client_list_init(&instance->clients);
 	qnetd_cluster_list_init(&instance->clusters);
 
@@ -62,7 +60,7 @@ qnetd_instance_init(struct qnetd_instance *instance,
 
 	instance->max_clients = max_clients;
 
-	timer_list_init(&instance->main_timer_list);
+	pr_poll_loop_init(&instance->main_poll_loop);
 
 	if (qnetd_dpd_timer_init(instance) != 0) {
 		return (0);
@@ -88,10 +86,10 @@ qnetd_instance_destroy(struct qnetd_instance *instance)
 		client = client_next;
 	}
 
-	pr_poll_array_destroy(&instance->poll_array);
 	qnetd_cluster_list_free(&instance->clusters);
 	qnetd_client_list_free(&instance->clients);
-	timer_list_free(&instance->main_timer_list);
+
+	pr_poll_loop_destroy(&instance->main_poll_loop);
 
 	return (0);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -53,7 +53,6 @@
 #include "qnetd-ipc.h"
 #include "qnetd-client-net.h"
 #include "qnetd-client-msg-received.h"
-#include "qnetd-poll-array-user-data.h"
 #include "utils.h"
 #include "msg.h"
 
@@ -90,230 +89,43 @@ qnetd_warn_nss(void)
 	log_nss(LOG_WARNING, "NSS warning");
 }
 
-static PRPollDesc *
-qnetd_pr_poll_array_create(struct qnetd_instance *instance)
+static int
+server_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
 {
-	struct pr_poll_array *poll_array;
-	const struct qnetd_client_list *client_list;
-	struct qnetd_client *client;
-	PRPollDesc *poll_desc;
-	struct qnetd_poll_array_user_data *user_data;
-	const struct unix_socket_client_list *ipc_client_list;
-	struct unix_socket_client *ipc_client;
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
 
-	poll_array = &instance->poll_array;
-	client_list = &instance->clients;
-	ipc_client_list = &instance->local_ipc.clients;
+	qnetd_client_net_accept(instance);
 
-	pr_poll_array_clean(poll_array);
-
-	if (pr_poll_array_add(poll_array, &poll_desc, (void **)&user_data) < 0) {
-		return (NULL);
-	}
-
-	poll_desc->fd = instance->server.socket;
-	poll_desc->in_flags = PR_POLL_READ;
-
-	user_data->type = QNETD_POLL_ARRAY_USER_DATA_TYPE_SOCKET;
-
-	if (qnetd_ipc_is_closed(instance)) {
-		log(LOG_DEBUG, "Listening socket is closed");
-
-		return (NULL);
-	}
-
-	if (pr_poll_array_add(poll_array, &poll_desc, (void **)&user_data) < 0) {
-		return (NULL);
-	}
-
-	poll_desc->fd = instance->ipc_socket_poll_fd;
-	poll_desc->in_flags = PR_POLL_READ;
-	user_data->type = QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_SOCKET;
-
-	TAILQ_FOREACH(client, client_list, entries) {
-		if (pr_poll_array_add(poll_array, &poll_desc, (void **)&user_data) < 0) {
-			return (NULL);
-		}
-		poll_desc->fd = client->socket;
-		poll_desc->in_flags = PR_POLL_READ;
-
-		if (!send_buffer_list_empty(&client->send_buffer_list)) {
-			poll_desc->in_flags |= PR_POLL_WRITE;
-		}
-
-		user_data->type = QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT;
-		user_data->client = client;
-	}
-
-	TAILQ_FOREACH(ipc_client, ipc_client_list, entries) {
-		if (!ipc_client->reading_line && !ipc_client->writing_buffer) {
-			continue;
-		}
-
-		if (pr_poll_array_add(poll_array, &poll_desc, (void **)&user_data) < 0) {
-			return (NULL);
-		}
-
-		poll_desc->fd = ((struct qnetd_ipc_user_data *)ipc_client->user_data)->nspr_poll_fd;
-		if (ipc_client->reading_line) {
-			poll_desc->in_flags |= PR_POLL_READ;
-		}
-
-		if (ipc_client->writing_buffer) {
-			poll_desc->in_flags |= PR_POLL_WRITE;
-		}
-
-		user_data->type = QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT;
-		user_data->ipc_client = ipc_client;
-	}
-
-	pr_poll_array_gc(poll_array);
-
-	return (poll_array->array);
+	return (0);
 }
 
 static int
-qnetd_poll(struct qnetd_instance *instance)
+server_socket_poll_loop_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
 {
-	struct qnetd_client *client;
-	PRPollDesc *pfds;
-	PRInt32 poll_res;
-	ssize_t i;
-	int client_disconnect;
-	struct qnetd_poll_array_user_data *user_data;
-	struct unix_socket_client *ipc_client;
 
-	client = NULL;
-	client_disconnect = 0;
+	/*
+	 * Poll write on listen socket -> fatal error
+	 */
+	log(LOG_CRIT, "POLL_WRITE on listening socket");
 
-	pfds = qnetd_pr_poll_array_create(instance);
-	if (pfds == NULL) {
-		return (-1);
-	}
+	return (-1);
+}
 
-	if ((poll_res = PR_Poll(pfds, pr_poll_array_size(&instance->poll_array),
-	    timer_list_time_to_expire(&instance->main_timer_list))) >= 0) {
-		timer_list_expire(&instance->main_timer_list);
+static int
+server_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+{
 
+	if (revents != POLLNVAL) {
 		/*
-		 * Walk thru pfds array and process events
+		 * Poll ERR on listening socket is fatal error.
+		 * POLL_NVAL is used as a signal to quit poll loop.
 		 */
-		for (i = 0; i < pr_poll_array_size(&instance->poll_array); i++) {
-			user_data = pr_poll_array_get_user_data(&instance->poll_array, i);
-
-			client = NULL;
-			ipc_client = NULL;
-			client_disconnect = 0;
-
-			switch (user_data->type) {
-			case QNETD_POLL_ARRAY_USER_DATA_TYPE_SOCKET:
-				break;
-			case QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT:
-				client = user_data->client;
-				client_disconnect = client->schedule_disconnect;
-				break;
-			case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_SOCKET:
-				break;
-			case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT:
-				ipc_client = user_data->ipc_client;
-				client_disconnect = ipc_client->schedule_disconnect;
-			}
-
-			if (!client_disconnect && poll_res > 0 &&
-			    pfds[i].out_flags & PR_POLL_READ) {
-				switch (user_data->type) {
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_SOCKET:
-					qnetd_client_net_accept(instance);
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT:
-					if (qnetd_client_net_read(instance, client) == -1) {
-						client_disconnect = 1;
-					}
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_SOCKET:
-					qnetd_ipc_accept(instance, &ipc_client);
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT:
-					qnetd_ipc_io_read(instance, ipc_client);
-					break;
-				}
-			}
-
-			if (!client_disconnect && poll_res > 0 &&
-			    pfds[i].out_flags & PR_POLL_WRITE) {
-				switch (user_data->type) {
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_SOCKET:
-					/*
-					 * Poll write on listen socket -> fatal error
-					 */
-					log(LOG_CRIT, "POLL_WRITE on listening socket");
-
-					return (-1);
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT:
-					if (qnetd_client_net_write(instance, client) == -1) {
-						client_disconnect = 1;
-					}
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_SOCKET:
-					log(LOG_CRIT, "POLL_WRITE on listening IPC socket");
-					return (-1);
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT:
-					qnetd_ipc_io_write(instance, ipc_client);
-					break;
-				}
-			}
-
-			if (!client_disconnect && poll_res > 0 &&
-			    (pfds[i].out_flags & (PR_POLL_ERR|PR_POLL_NVAL|PR_POLL_HUP|PR_POLL_EXCEPT)) &&
-			    !(pfds[i].out_flags & (PR_POLL_READ|PR_POLL_WRITE))) {
-				switch (user_data->type) {
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_SOCKET:
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_SOCKET:
-					if (pfds[i].out_flags != PR_POLL_NVAL) {
-						/*
-						 * Poll ERR on listening socket is fatal error.
-						 * POLL_NVAL is used as a signal to quit poll loop.
-						 */
-						 log(LOG_CRIT, "POLL_ERR (%u) on listening "
-						    "socket", pfds[i].out_flags);
-					} else {
-						log(LOG_DEBUG, "Listening socket is closed");
-					}
-
-					return (-1);
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT:
-					log(LOG_DEBUG, "POLL_ERR (%u) on client socket. "
-					    "Disconnecting.", pfds[i].out_flags);
-
-					client_disconnect = 1;
-					break;
-				case QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT:
-					log(LOG_DEBUG, "POLL_ERR (%u) on ipc client socket."
-					    " Disconnecting.", pfds[i].out_flags);
-
-					client_disconnect = 1;
-					break;
-				}
-			}
-
-			/*
-			 * If client is scheduled for disconnect, disconnect it
-			 */
-			if (user_data->type == QNETD_POLL_ARRAY_USER_DATA_TYPE_CLIENT &&
-			    client_disconnect) {
-				qnetd_instance_client_disconnect(instance, client, 0);
-			} else if (user_data->type == QNETD_POLL_ARRAY_USER_DATA_TYPE_IPC_CLIENT &&
-			    (client_disconnect || ipc_client->schedule_disconnect)) {
-				qnetd_ipc_client_disconnect(instance, ipc_client);
-			}
-		}
+		log(LOG_CRIT, "POLL_ERR (%u) on listening socket", revents);
+	} else {
+		log(LOG_DEBUG, "Listening socket is closed");
 	}
 
-
-	return (0);
+	return (-1);
 }
 
 static void
@@ -530,6 +342,7 @@ main(int argc, char * const argv[])
 	int lock_file;
 	int another_instance_running;
 	int log_target;
+	int poll_res;
 
 	if (qnetd_advanced_settings_init(&advanced_settings) != 0) {
 		errx(1, "Can't alloc memory for advanced settings");
@@ -557,7 +370,7 @@ main(int argc, char * const argv[])
 	    advanced_settings.nss_db_dir : NULL)) != 0) {
 		log_err(LOG_ERR, "Can't open NSS DB directory");
 
-		exit (1);
+		return (1);
 	}
 
 	/*
@@ -575,7 +388,7 @@ main(int argc, char * const argv[])
 			log_err(LOG_ERR, "Can't acquire lock");
 		}
 
-		exit(1);
+		return (1);
 	}
 
 	log(LOG_DEBUG, "Initializing nss");
@@ -591,7 +404,7 @@ main(int argc, char * const argv[])
 	if (qnetd_instance_init(&instance, tls_supported, client_cert_required,
 	    max_clients, &advanced_settings) == -1) {
 		log(LOG_ERR, "Can't initialize qnetd");
-		exit(1);
+		return (1);
 	}
 	instance.host_addr = host_addr;
 	instance.host_port = host_port;
@@ -621,12 +434,23 @@ main(int argc, char * const argv[])
 		qnetd_err_nss();
 	}
 
+	if (pr_poll_loop_add_prfd(&instance.main_poll_loop, instance.server.socket, POLLIN,
+	    NULL,
+	    server_socket_poll_loop_read_cb,
+	    server_socket_poll_loop_write_cb,
+	    server_socket_poll_loop_err_cb,
+	    &instance, NULL) != 0) {
+		log(LOG_ERR, "Can't add server socket to main poll loop");
+
+		return (1);
+	}
+
 	global_instance = &instance;
 	signal_handlers_register();
 
 	log(LOG_DEBUG, "Registering algorithms");
 	if (qnetd_algorithm_register_all() != 0) {
-		exit(1);
+		return (1);
 	}
 
 	log(LOG_DEBUG, "QNetd ready to provide service");
@@ -638,14 +462,21 @@ main(int argc, char * const argv[])
 	/*
 	 * MAIN LOOP
 	 */
-	while (qnetd_poll(&instance) == 0) {
+	while ((poll_res = pr_poll_loop_exec(&instance.main_poll_loop)) == 0) {
+	}
+
+	if (poll_res == -2) {
+		log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
+		return (1);
 	}
 
 	/*
 	 * Cleanup
 	 */
+	log(LOG_DEBUG, "Destroying qnetd ipc");
 	qnetd_ipc_destroy(&instance);
 
+	log(LOG_DEBUG, "Closing server socket");
 	if (PR_Close(instance.server.socket) != PR_SUCCESS) {
 		qnetd_warn_nss();
 	}
@@ -669,6 +500,7 @@ main(int argc, char * const argv[])
 		qnetd_warn_nss();
 	}
 
+	log(LOG_DEBUG, "Closing log");
 	log_close();
 
 	return (0);

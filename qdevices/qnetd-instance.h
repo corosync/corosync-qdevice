@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -45,9 +45,10 @@
 #include "qnetd-cluster-list.h"
 #include "pr-poll-array.h"
 #include "qnet-config.h"
-#include "timer-list.h"
 #include "unix-socket-ipc.h"
 #include "qnetd-advanced-settings.h"
+#include "pr-poll-loop.h"
+#include "timer-list.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,16 +63,14 @@ struct qnetd_instance {
 	size_t max_clients;
 	struct qnetd_client_list clients;
 	struct qnetd_cluster_list clusters;
-	struct pr_poll_array poll_array;
 	enum tlv_tls_supported tls_supported;
 	int tls_client_cert_required;
 	const char *host_addr;
 	uint16_t host_port;
-	struct timer_list main_timer_list;
 	struct timer_list_entry *dpd_timer;		/* Dead peer detection timer */
 	struct unix_socket_ipc local_ipc;
-	PRFileDesc *ipc_socket_poll_fd;
 	const struct qnetd_advanced_settings *advanced_settings;
+	struct pr_poll_loop main_poll_loop;
 };
 
 extern int		qnetd_instance_init(struct qnetd_instance *instance,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -52,6 +52,78 @@ qnetd_client_net_write_finished(struct qnetd_instance *instance, struct qnetd_cl
 	/*
 	 * Callback is currently unused
 	 */
+
+	return (0);
+}
+
+static int
+qnetd_client_net_socket_poll_loop_set_events_cb(PRFileDesc *prfd, short *events,
+    void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct qnetd_client *client = (struct qnetd_client *)user_data2;
+
+	if (client->schedule_disconnect) {
+		qnetd_instance_client_disconnect(instance, client, 0);
+
+		if (pr_poll_loop_del_prfd(&instance->main_poll_loop, prfd) == -1) {
+			log(LOG_CRIT, "pr_poll_loop_del_prfd for client socket failed");
+
+			return (-2);
+		}
+
+		return (-1);
+	}
+
+	if (!send_buffer_list_empty(&client->send_buffer_list)) {
+		*events |= POLLOUT;
+	}
+
+	return (0);
+}
+
+
+static int
+qnetd_client_net_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct qnetd_client *client = (struct qnetd_client *)user_data2;
+
+	if (!client->schedule_disconnect) {
+		if (qnetd_client_net_read(instance, client) == -1) {
+			client->schedule_disconnect = 1;
+		}
+	}
+
+	return (0);
+}
+
+static int
+qnetd_client_net_socket_poll_loop_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct qnetd_client *client = (struct qnetd_client *)user_data2;
+
+	if (!client->schedule_disconnect) {
+		if (qnetd_client_net_write(instance, client) == -1) {
+			client->schedule_disconnect = 1;
+		}
+	}
+
+	return (0);
+}
+
+static int
+qnetd_client_net_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+{
+	struct qnetd_client *client = (struct qnetd_client *)user_data2;
+
+	if (!client->schedule_disconnect) {
+		log(LOG_DEBUG, "POLL_ERR (%u) on client socket. "
+		    "Disconnecting.", revents);
+
+		client->schedule_disconnect = 1;
+	}
 
 	return (0);
 }
@@ -231,9 +303,21 @@ qnetd_client_net_accept(struct qnetd_instance *instance)
 	    client_addr_str,
 	    instance->advanced_settings->max_client_receive_size,
 	    instance->advanced_settings->max_client_send_buffers,
-	    instance->advanced_settings->max_client_send_size, &instance->main_timer_list);
+	    instance->advanced_settings->max_client_send_size,
+	    pr_poll_loop_get_timer_list(&instance->main_poll_loop));
 	if (client == NULL) {
 		log(LOG_ERR, "Can't add client to list");
+		res_err = -2;
+		goto exit_close;
+	}
+
+	if (pr_poll_loop_add_prfd(&instance->main_poll_loop, client_socket, POLLIN,
+	    qnetd_client_net_socket_poll_loop_set_events_cb,
+	    qnetd_client_net_socket_poll_loop_read_cb,
+	    qnetd_client_net_socket_poll_loop_write_cb,
+	    qnetd_client_net_socket_poll_loop_err_cb,
+	    instance, client) == -1) {
+		log_err(LOG_CRIT, "Can't add client to main poll loop");
 		res_err = -2;
 		goto exit_close;
 	}

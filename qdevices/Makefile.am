@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2019 Red Hat, Inc.
+# Copyright (c) 2012-2020 Red Hat, Inc.
 #
 # Authors: Jan Friesse (jfriesse@redhat.com)
 #          Fabio M. Di Nitto (fdinitto@redhat.com)
@@ -70,8 +70,9 @@ corosync_qnetd_SOURCES	= corosync-qnetd.c \
                           unix-socket-client.c unix-socket-client.h \
                           unix-socket-client-list.c unix-socket-client-list.h \
                           unix-socket.c unix-socket.h qnetd-ipc-cmd.c qnetd-ipc-cmd.h \
-                          qnetd-poll-array-user-data.h qnet-config.h dynar-getopt-lex.c \
-                          dynar-getopt-lex.h qnetd-advanced-settings.c qnetd-advanced-settings.h
+                          qnet-config.h dynar-getopt-lex.c \
+                          dynar-getopt-lex.h qnetd-advanced-settings.c qnetd-advanced-settings.h \
+                          pr-poll-loop.c pr-poll-loop.h
 
 corosync_qnetd_tool_SOURCES = corosync-qnetd-tool.c unix-socket.c unix-socket.h dynar.c dynar.h \
                               dynar-str.c dynar-str.h utils.c utils.h

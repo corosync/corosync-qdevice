@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -45,6 +45,144 @@
  */
 #include <private/pprio.h>
 
+/*
+ * Callbacks
+ */
+
+/*
+ * IPC server socket
+ */
+static int
+ipc_socket_poll_loop_set_events_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+
+	if (qnetd_ipc_is_closed(instance)) {
+		log(LOG_DEBUG, "Listening socket is closed");
+
+		return (-2);
+	}
+
+	return (0);
+}
+
+static int
+ipc_socket_poll_loop_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct unix_socket_client *ipc_client;
+
+	qnetd_ipc_accept(instance, &ipc_client);
+
+	return (0);
+}
+
+static int
+ipc_socket_poll_loop_write_cb(int fd, void *user_data1, void *user_data2)
+{
+
+	log(LOG_CRIT, "POLL_WRITE on listening IPC socket");
+
+	return (-1);
+}
+
+static int
+ipc_socket_poll_loop_err_cb(int fd, short revents, void *user_data1, void *user_data2)
+{
+
+	if (revents != POLLNVAL) {
+		/*
+		 * Poll ERR on listening socket is fatal error.
+		 * POLL_NVAL is used as a signal to quit poll loop.
+		 */
+		log(LOG_CRIT, "POLL_ERR (%u) on listening socket", revents);
+	} else {
+		log(LOG_DEBUG, "Listening socket is closed");
+	}
+
+	return (-1);
+}
+
+/*
+ * IPC client sockets
+ */
+static int
+ipc_client_socket_poll_loop_set_events_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (ipc_client->schedule_disconnect) {
+		qnetd_ipc_client_disconnect(instance, ipc_client);
+
+		if (pr_poll_loop_del_fd(&instance->main_poll_loop, fd) == -1) {
+			log(LOG_CRIT, "pr_poll_loop_del_fd for ipc client socket failed");
+
+			return (-2);
+		}
+
+		return (-1);
+	}
+
+	if (!ipc_client->reading_line && !ipc_client->writing_buffer) {
+		return (-1);
+	}
+
+	if (ipc_client->reading_line) {
+		*events |= POLLIN;
+	}
+
+	if (ipc_client->writing_buffer) {
+		*events |= POLLOUT;
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		qnetd_ipc_io_read(instance, ipc_client);
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_write_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		qnetd_ipc_io_write(instance, ipc_client);
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_err_cb(int fd, short revents, void *user_data1, void *user_data2)
+{
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		log(LOG_DEBUG, "POLL_ERR (%u) on ipc client socket."
+		    " Disconnecting.", revents);
+
+		ipc_client->schedule_disconnect = 1;
+	}
+
+	return (0);
+}
+
+/*
+ * Exported functions
+ */
 int
 qnetd_ipc_init(struct qnetd_instance *instance)
 {
@@ -60,8 +198,12 @@ qnetd_ipc_init(struct qnetd_instance *instance)
 		return (-1);
 	}
 
-	if ((instance->ipc_socket_poll_fd = PR_CreateSocketPollFd(instance->local_ipc.socket)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR IPC socket poll fd");
+	if (pr_poll_loop_add_fd(&instance->main_poll_loop, instance->local_ipc.socket, POLLIN,
+	    ipc_socket_poll_loop_set_events_cb,
+	    ipc_socket_poll_loop_read_cb,
+	    ipc_socket_poll_loop_write_cb,
+	    ipc_socket_poll_loop_err_cb, instance, NULL) == -1) {
+		log_err(LOG_CRIT, "Can't add IPC socket to main poll loop");
 
 		return (-1);
 	}
@@ -102,10 +244,6 @@ qnetd_ipc_destroy(struct qnetd_instance *instance)
 		free(client->user_data);
 	}
 
-	if (PR_DestroySocketPollFd(instance->ipc_socket_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to destroy IPC poll socket fd");
-	}
-
 	res = unix_socket_ipc_destroy(&instance->local_ipc);
 	if (res != 0) {
 		log_err(LOG_WARNING, "Can't destroy local IPC");
@@ -119,7 +257,6 @@ qnetd_ipc_accept(struct qnetd_instance *instance, struct unix_socket_client **re
 {
 	int res;
 	int accept_res;
-	PRFileDesc *prfd;
 
 	accept_res = unix_socket_ipc_accept(&instance->local_ipc, res_client);
 
@@ -155,16 +292,18 @@ qnetd_ipc_accept(struct qnetd_instance *instance, struct unix_socket_client **re
 	}
 	memset((*res_client)->user_data, 0, sizeof(struct qnetd_ipc_user_data));
 
-	prfd = PR_CreateSocketPollFd((*res_client)->socket);
-	if (prfd == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR poll fd for IPC client. Disconnecting client");
-		qnetd_ipc_client_disconnect(instance, *res_client);
+	if (pr_poll_loop_add_fd(&instance->main_poll_loop, (*res_client)->socket, 0,
+	    ipc_client_socket_poll_loop_set_events_cb,
+	    ipc_client_socket_poll_loop_read_cb,
+	    ipc_client_socket_poll_loop_write_cb,
+	    ipc_client_socket_poll_loop_err_cb, instance, *res_client) == -1) {
+		log_err(LOG_CRIT, "Can't add IPC client socket to main poll loop");
 		res = -1;
+
+		qnetd_ipc_client_disconnect(instance, *res_client);
 
 		goto return_res;
 	}
-
-	((struct qnetd_ipc_user_data *)(*res_client)->user_data)->nspr_poll_fd = prfd;
 
 return_res:
 	return (res);
@@ -173,12 +312,6 @@ return_res:
 void
 qnetd_ipc_client_disconnect(struct qnetd_instance *instance, struct unix_socket_client *client)
 {
-
-	if ((struct qnetd_ipc_user_data *)(client)->user_data != NULL &&
-	    PR_DestroySocketPollFd(
-	    ((struct qnetd_ipc_user_data *)(client)->user_data)->nspr_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to destroy client IPC poll socket fd");
-	}
 
 	free(client->user_data);
 	unix_socket_ipc_client_disconnect(&instance->local_ipc, client);

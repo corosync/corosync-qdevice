@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -75,7 +75,7 @@ qnetd_dpd_timer_init(struct qnetd_instance *instance)
 		return (0);
 	}
 
-	instance->dpd_timer = timer_list_add(&instance->main_timer_list,
+	instance->dpd_timer = timer_list_add(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
 	    instance->advanced_settings->dpd_interval,
 	    qnetd_dpd_timer_cb, (void *)instance, NULL);
 	if (instance->dpd_timer == NULL) {
@@ -92,7 +92,7 @@ qnetd_dpd_timer_destroy(struct qnetd_instance *instance)
 {
 
 	if (instance->dpd_timer != NULL) {
-		timer_list_delete(&instance->main_timer_list, instance->dpd_timer);
+		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), instance->dpd_timer);
 		instance->dpd_timer = NULL;
 	}
 }

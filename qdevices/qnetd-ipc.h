@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -43,7 +43,6 @@ extern "C" {
 
 struct qnetd_ipc_user_data {
 	int shutdown_requested;
-	PRFileDesc *nspr_poll_fd;
 };
 
 extern int		qnetd_ipc_init(struct qnetd_instance *instance);
