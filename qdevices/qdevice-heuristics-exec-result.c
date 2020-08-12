@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -39,9 +39,9 @@ qdevice_heuristics_exec_result_to_str(enum qdevice_heuristics_exec_result exec_r
 {
 
 	switch (exec_result) {
-	case QDEVICE_HEURISTICS_EXEC_RESULT_FAIL: return("Fail"); break;
-	case QDEVICE_HEURISTICS_EXEC_RESULT_PASS: return("Pass"); break;
-	case QDEVICE_HEURISTICS_EXEC_RESULT_DISABLED: return("Disabled"); break;
+	case QDEVICE_HEURISTICS_EXEC_RESULT_FAIL: return ("Fail"); break;
+	case QDEVICE_HEURISTICS_EXEC_RESULT_PASS: return ("Pass"); break;
+	case QDEVICE_HEURISTICS_EXEC_RESULT_DISABLED: return ("Disabled"); break;
 	}
 
 	return ("Unknown heuristics exec result value");
