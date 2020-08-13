@@ -161,10 +161,11 @@ corosync-qdevice-net-certutil: corosync-qdevice-net-certutil.sh
 
 TESTS				= qnetd-cluster-list.test dynar.test dynar-simple-lex.test \
                                   dynar-getopt-lex.test process-list.test utils.test \
-                                  log.test
+                                  log.test pr-poll-loop.test
+
 check_PROGRAMS			= qnetd-cluster-list.test dynar.test dynar-simple-lex.test \
                                   dynar-getopt-lex.test process-list.test utils.test \
-                                  log.test
+                                  log.test pr-poll-loop.test
 
 qnetd_cluster_list_test_SOURCES	= test-qnetd-cluster-list.c qnetd-cluster-list.c qnetd-cluster-list.h \
                                   qnetd-cluster.c qnetd-cluster.h \
@@ -183,6 +184,11 @@ process_list_test_SOURCES	= test-process-list.c dynar.c dynar.h dynar-str.c dyna
                                   dynar-simple-lex.c dynar-simple-lex.h process-list.c process-list.h
 utils_test_SOURCES		= test-utils.c utils.c utils.h
 log_test_SOURCES		= test-log.c log.c log.h
+
+pr_poll_loop_test_SOURCES	= test-pr-poll-loop.c pr-poll-loop.c pr-poll-loop.h \
+                                  pr-poll-array.c pr-poll-array.h timer-list.c timer-list.h
+pr_poll_loop_test_CFLAGS	= $(nss_CFLAGS)
+pr_poll_loop_test_LDADD		= $(nss_LIBS)
 
 endif
 

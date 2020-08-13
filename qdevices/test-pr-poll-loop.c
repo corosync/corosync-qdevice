@@ -1,0 +1,655 @@
+/*
+ * Copyright (c) 2015-2020 Red Hat, Inc.
+ *
+ * All rights reserved.
+ *
+ * Author: Jan Friesse (jfriesse@redhat.com)
+ *
+ * This software licensed under BSD license, the text of which follows:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * - Redistributions of source code must retain the above copyright notice,
+ *   this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ *   this list of conditions and the following disclaimer in the documentation
+ *   and/or other materials provided with the distribution.
+ * - Neither the name of the Red Hat, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <stdio.h>
+#include <assert.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+
+#include "pr-poll-loop.h"
+
+/*
+ * Needed for creating nspr handle from unix fd
+ */
+#include <private/pprio.h>
+
+#define BUF_SIZE		256
+
+#define TIMER_TIMEOUT		10000
+#define TIMER_TEST_TIMEOUT	100
+/*
+ * Must be smaller than BUF_SIZE
+ */
+#define READ_STR		"test"
+
+static int fd_set_events_cb1_return_called = 0;
+static int fd_set_events_cb2_return_called = 0;
+static int fd_read_cb1_called = 0;
+static int fd_read_cb2_called = 0;
+static int fd_write_cb1_called = 0;
+static int fd_err_cb1_called = 0;
+static int timeout_cb_called = 0;
+
+static int prfd_set_events_cb1_return_called = 0;
+static int prfd_set_events_cb2_return_called = 0;
+static int prfd_read_cb1_called = 0;
+static int prfd_read_cb2_called = 0;
+static int prfd_write_cb1_called = 0;
+static int prfd_err_cb1_called = 0;
+
+static int
+timeout_cb(void *data1, void *data2)
+{
+
+	timeout_cb_called = 1;
+
+	return (0);
+}
+
+static int
+fd_set_events_cb1_return(int fd, short *events, void *user_data1, void *user_data2)
+{
+
+	fd_set_events_cb1_return_called++;
+
+	assert(user_data1 == &fd_set_events_cb1_return_called);
+	assert(user_data2 == NULL);
+
+	return (-2);
+}
+
+static int
+fd_set_events_cb2_return(int fd, short *events, void *user_data1, void *user_data2)
+{
+
+	fd_set_events_cb2_return_called++;
+
+	assert(user_data1 == NULL);
+	assert(user_data2 == &fd_set_events_cb2_return_called);
+
+	return (-2);
+}
+
+static int
+fd_read_cb1(int fd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &fd_read_cb1_called);
+	assert(user_data2 == fd_read_cb1);
+
+	fd_read_cb1_called++;
+
+	assert(read(fd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (0);
+}
+
+static int
+fd_read_cb2(int fd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &fd_read_cb2_called);
+	assert(user_data2 == fd_read_cb2);
+
+	fd_read_cb2_called++;
+
+	assert(read(fd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (-1);
+}
+
+static int
+fd_write_cb1(int fd, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &fd_write_cb1_called);
+	assert(user_data2 == fd_write_cb1);
+
+	fd_write_cb1_called++;
+
+	return (0);
+}
+
+static int
+fd_err_cb1(int fd, short revents, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &fd_err_cb1_called);
+	assert(user_data2 == fd_err_cb1);
+
+	fd_err_cb1_called++;
+
+	return (0);
+}
+
+static int
+prfd_set_events_cb1_return(PRFileDesc *prfd, short *events, void *user_data1, void *user_data2)
+{
+
+	prfd_set_events_cb1_return_called++;
+
+	assert(user_data1 == &prfd_set_events_cb1_return_called);
+	assert(user_data2 == NULL);
+
+	return (-2);
+}
+
+static int
+prfd_set_events_cb2_return(PRFileDesc *prfd, short *events, void *user_data1, void *user_data2)
+{
+
+	prfd_set_events_cb2_return_called++;
+
+	assert(user_data1 == NULL);
+	assert(user_data2 == &prfd_set_events_cb2_return_called);
+
+	return (-2);
+}
+
+static int
+prfd_read_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &prfd_read_cb1_called);
+	assert(user_data2 == prfd_read_cb1);
+
+	prfd_read_cb1_called++;
+
+	assert(PR_Read(prfd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (0);
+}
+
+static int
+prfd_read_cb2(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &prfd_read_cb2_called);
+	assert(user_data2 == prfd_read_cb2);
+
+	prfd_read_cb2_called++;
+
+	assert(PR_Read(prfd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (-1);
+}
+
+static int
+prfd_write_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &prfd_write_cb1_called);
+	assert(user_data2 == prfd_write_cb1);
+
+	prfd_write_cb1_called++;
+
+	return (0);
+}
+
+static int
+prfd_err_cb1(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &prfd_err_cb1_called);
+	assert(user_data2 == prfd_err_cb1);
+
+	prfd_err_cb1_called++;
+
+	return (0);
+}
+
+static void
+init_global_vars(void)
+{
+	fd_set_events_cb1_return_called = -1;
+	fd_set_events_cb2_return_called = -1;
+	fd_read_cb1_called = -1;
+	fd_read_cb2_called = -1;
+	fd_write_cb1_called = -1;
+	fd_err_cb1_called = -1;
+	timeout_cb_called = -1;
+
+	prfd_set_events_cb1_return_called = -1;
+	prfd_set_events_cb2_return_called = -1;
+	prfd_read_cb1_called = -1;
+	prfd_read_cb2_called = -1;
+	prfd_write_cb1_called = -1;
+	prfd_err_cb1_called = -1;
+}
+
+static void
+test_fd_basics(struct pr_poll_loop *poll_loop)
+{
+	int pipe_fd1[2];
+	struct timer_list_entry *timeout_timer;
+
+	init_global_vars();
+
+	/*
+	 * Add POLLNVAL -> failure
+	 */
+	assert(pr_poll_loop_add_fd(poll_loop, 0, POLLNVAL, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == -1);
+	/*
+	 * Del non-existing fdL -> failure
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, 0) == -1);
+
+	/*
+	 * Add and delete fd twice
+	 */
+	assert(pr_poll_loop_add_fd(poll_loop, 0, 0, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == 0);
+	assert(pr_poll_loop_add_fd(poll_loop, 0, 0, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == -1);
+	assert(pr_poll_loop_del_fd(poll_loop, 0) == 0);
+	assert(pr_poll_loop_del_fd(poll_loop, 0) == -1);
+
+	/*
+	 * Test timeout timer
+	 * with empty list
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TEST_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	timeout_cb_called = 0;
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+	assert(timeout_cb_called == 1);
+
+	/*
+	 * Test user_data passing
+	 */
+	assert(pipe(pipe_fd1) == 0);
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[0], POLLIN, fd_set_events_cb1_return,
+	    NULL, NULL, NULL, (void *)&fd_set_events_cb1_return_called, NULL) == 0);
+
+	fd_set_events_cb1_return_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(fd_set_events_cb1_return_called == 1);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Remove entry and try different cb
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[1], POLLOUT, fd_set_events_cb2_return,
+	    NULL, NULL, NULL, NULL, (void *)&fd_set_events_cb2_return_called) == 0);
+
+	fd_set_events_cb1_return_called = 0;
+	fd_set_events_cb2_return_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(fd_set_events_cb1_return_called == 0);
+	assert(fd_set_events_cb2_return_called == 1);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Delete entry and try timeout again
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == -1);
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[1]) == 0);
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TEST_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	timeout_cb_called = 0;
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+	assert(timeout_cb_called == 1);
+
+	/*
+	 * Try reading
+	 */
+	assert(write(pipe_fd1[1], READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[0], POLLIN, NULL,
+	    fd_read_cb1, NULL, NULL,
+	    &fd_read_cb1_called, fd_read_cb1) == 0);
+
+	fd_read_cb1_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(fd_read_cb1_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Try timeout with valid entry
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TEST_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	timeout_cb_called = 0;
+	fd_read_cb1_called = 0;
+
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(timeout_cb_called == 1);
+	assert(fd_read_cb1_called == 0);
+
+	/*
+	 * Try reading where cb returns err
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
+	assert(write(pipe_fd1[1], READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[0], POLLIN, NULL,
+	    fd_read_cb2, NULL, NULL,
+	    &fd_read_cb2_called, fd_read_cb2) == 0);
+
+	fd_read_cb1_called = 0;
+	fd_read_cb2_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(fd_read_cb1_called == 0);
+	assert(fd_read_cb2_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Try writing
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[1], POLLOUT, NULL,
+	    NULL, fd_write_cb1, NULL,
+	    &fd_write_cb1_called, fd_write_cb1) == 0);
+
+	fd_write_cb1_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(fd_write_cb1_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Try err cb
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[1]) == 0);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[0], POLLIN, NULL,
+	    NULL, NULL, fd_err_cb1,
+	    &fd_err_cb1_called, fd_err_cb1) == 0);
+
+	assert(close(pipe_fd1[0]) == 0);
+	assert(close(pipe_fd1[1]) == 0);
+	fd_err_cb1_called = 0;
+	timeout_cb_called = 0;
+	fd_write_cb1_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(fd_err_cb1_called == 1);
+	assert(fd_write_cb1_called == 0);
+	assert(timeout_cb_called == 0);
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+}
+
+static void
+test_prfd_basics(struct pr_poll_loop *poll_loop)
+{
+	PRFileDesc *read_pipe;
+	PRFileDesc *write_pipe;
+	struct timer_list_entry *timeout_timer;
+	int pipe_fd1[2];
+
+	init_global_vars();
+
+	assert(PR_CreatePipe(&read_pipe, &write_pipe) == PR_SUCCESS);
+
+	/*
+	 * Add POLLNVAL -> failure
+	 */
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, POLLNVAL, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == -1);
+	/*
+	 * Del non-existing fdL -> failure
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == -1);
+
+	/*
+	 * Add and delete fd twice
+	 */
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, 0, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == 0);
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, 0, NULL, NULL, NULL, NULL,
+	    NULL, NULL) == -1);
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == -1);
+
+	/*
+	 * Test user_data passing
+	 */
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, POLLIN, prfd_set_events_cb1_return,
+	    NULL, NULL, NULL, (void *)&prfd_set_events_cb1_return_called, NULL) == 0);
+
+	prfd_set_events_cb1_return_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(prfd_set_events_cb1_return_called == 1);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Remove entry and try different cb
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
+	assert(pr_poll_loop_add_prfd(poll_loop, write_pipe, POLLOUT, prfd_set_events_cb2_return,
+	    NULL, NULL, NULL, NULL, (void *)&prfd_set_events_cb2_return_called) == 0);
+
+	prfd_set_events_cb1_return_called = 0;
+	prfd_set_events_cb2_return_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(prfd_set_events_cb1_return_called == 0);
+	assert(prfd_set_events_cb2_return_called == 1);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Delete entry and try timeout again
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == -1);
+	assert(pr_poll_loop_del_prfd(poll_loop, write_pipe) == 0);
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TEST_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	timeout_cb_called = 0;
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+	assert(timeout_cb_called == 1);
+
+	/*
+	 * Try reading
+	 */
+	assert(PR_Write(write_pipe, READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, POLLIN, NULL,
+	    prfd_read_cb1, NULL, NULL,
+	    &prfd_read_cb1_called, prfd_read_cb1) == 0);
+
+	prfd_read_cb1_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(prfd_read_cb1_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Try timeout with valid entry
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TEST_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	timeout_cb_called = 0;
+	prfd_read_cb1_called = 0;
+
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(timeout_cb_called == 1);
+	assert(prfd_read_cb1_called == 0);
+
+	/*
+	 * Try reading where cb returns err
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
+	assert(PR_Write(write_pipe, READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, POLLIN, NULL,
+	    prfd_read_cb2, NULL, NULL,
+	    &prfd_read_cb2_called, prfd_read_cb2) == 0);
+
+	prfd_read_cb1_called = 0;
+	prfd_read_cb2_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(prfd_read_cb1_called == 0);
+	assert(prfd_read_cb2_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Try writing
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, write_pipe, POLLOUT, NULL,
+	    NULL, prfd_write_cb1, NULL,
+	    &prfd_write_cb1_called, prfd_write_cb1) == 0);
+
+	prfd_write_cb1_called = 0;
+	timeout_cb_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(prfd_write_cb1_called == 1);
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	assert(PR_Close(read_pipe) == 0);
+	assert(PR_Close(write_pipe) == 0);
+
+	/*
+	 * Try err cb
+	 */
+	assert(pr_poll_loop_del_prfd(poll_loop, write_pipe) == 0);
+
+	/*
+	 * Must use native pipe, because PR_Close deallocate PRFileDesc completelly
+	 */
+	assert(pipe(pipe_fd1) == 0);
+	assert((read_pipe = PR_CreateSocketPollFd(pipe_fd1[0])) != NULL);
+
+	assert(close(pipe_fd1[0]) == 0);
+	assert(close(pipe_fd1[1]) == 0);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe, POLLIN, NULL,
+	    NULL, NULL, prfd_err_cb1,
+	    &prfd_err_cb1_called, prfd_err_cb1) == 0);
+
+	prfd_err_cb1_called = 0;
+	timeout_cb_called = 0;
+	prfd_write_cb1_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(prfd_err_cb1_called == 1);
+	assert(prfd_write_cb1_called == 0);
+	assert(timeout_cb_called == 0);
+	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	assert(PR_DestroySocketPollFd(read_pipe) == PR_SUCCESS);
+}
+
+int
+main(void)
+{
+	struct pr_poll_loop poll_loop;
+
+	PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
+
+	pr_poll_loop_init(&poll_loop);
+
+	test_fd_basics(&poll_loop);
+
+	test_prfd_basics(&poll_loop);
+
+	pr_poll_loop_destroy(&poll_loop);
+
+	assert(PR_Cleanup() == PR_SUCCESS);
+
+	return (0);
+}

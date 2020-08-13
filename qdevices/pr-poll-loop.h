@@ -72,7 +72,8 @@ typedef int (*pr_poll_loop_prfd_write_cb_fn)(PRFileDesc *prfd, void *user_data1,
  * Return code: 0 - Ok, -1 - Return error
  */
 typedef int (*pr_poll_loop_fd_err_cb_fn)(int fd, short revents, void *user_data1, void *user_data2);
-typedef int (*pr_poll_loop_prfd_err_cb_fn)(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2);
+typedef int (*pr_poll_loop_prfd_err_cb_fn)(PRFileDesc *prfd, short revents, void *user_data1,
+    void *user_data2);
 
 struct pr_poll_loop_fd_entry {
 	int fd;
