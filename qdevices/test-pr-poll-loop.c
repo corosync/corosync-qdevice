@@ -69,6 +69,17 @@ static int prfd_read_cb2_called = 0;
 static int prfd_write_cb1_called = 0;
 static int prfd_err_cb1_called = 0;
 
+static int test_complex_state = 0;
+static int test_complex_set_events_pipe1_read_called = 0;
+static int test_complex_read_pipe1_read_called = 0;
+static int test_complex_set_events_pipe1_write_called = 0;
+static int test_complex_write_pipe1_write_called = 0;
+static int test_complex_set_events_pipe2_read_called = 0;
+static int test_complex_read_pipe2_read_called = 0;
+static int test_complex_set_events_pipe2_write_called = 0;
+static int test_complex_write_pipe2_write_called = 0;
+static int test_complex_read_pipe1_fd = 0;
+
 static int
 timeout_cb(void *data1, void *data2)
 {
@@ -234,6 +245,159 @@ prfd_err_cb1(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2
 	assert(user_data2 == prfd_err_cb1);
 
 	prfd_err_cb1_called++;
+
+	return (0);
+}
+
+static int
+test_complex_set_events_pipe1_read_cb(PRFileDesc *prfd, short *events, void *user_data1, void *user_data2)
+{
+
+	test_complex_set_events_pipe1_read_called++;
+
+	assert(user_data1 == &test_complex_set_events_pipe1_read_called);
+	assert(user_data2 == test_complex_set_events_pipe1_read_cb);
+	assert(*events == 0);
+
+	if (test_complex_state == 2) {
+		*events = POLLIN;
+	}
+
+	return (0);
+}
+
+static int
+test_complex_read_pipe1_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &test_complex_set_events_pipe1_read_called);
+	assert(user_data2 == test_complex_set_events_pipe1_read_cb);
+
+	test_complex_read_pipe1_read_called++;
+
+	/*
+	 * prfd for this case is just a wrapper, we need to use real fd
+	 */
+	assert(read(test_complex_read_pipe1_fd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (0);
+}
+
+static int
+test_complex_write_pipe1_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+
+	assert(0);
+
+	return (-1);
+}
+
+static int
+test_complex_set_events_pipe1_write_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+
+	test_complex_set_events_pipe1_write_called++;
+
+	assert(user_data1 == &test_complex_set_events_pipe1_write_called);
+	assert(user_data2 == test_complex_set_events_pipe1_write_cb);
+	assert(*events == 0);
+
+	if (test_complex_state == 1) {
+		*events = POLLOUT;
+	}
+
+	return (0);
+}
+
+static int
+test_complex_read_pipe1_write_cb(int fd, void *user_data1, void *user_data2)
+{
+
+	assert(0);
+
+	return (-1);
+}
+
+static int
+test_complex_write_pipe1_write_cb(int fd, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &test_complex_set_events_pipe1_write_called);
+	assert(user_data2 == test_complex_set_events_pipe1_write_cb);
+	test_complex_write_pipe1_write_called++;
+
+	return (0);
+}
+
+static int
+test_complex_set_events_pipe2_read_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+
+	test_complex_set_events_pipe2_read_called++;
+
+	assert(user_data1 == &test_complex_set_events_pipe2_read_called);
+	assert(user_data2 == test_complex_set_events_pipe2_read_cb);
+	assert(*events == POLLIN);
+
+	return (0);
+}
+
+static int
+test_complex_read_pipe2_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	char buf[BUF_SIZE];
+
+	assert(user_data1 == &test_complex_set_events_pipe2_read_called);
+	assert(user_data2 == test_complex_set_events_pipe2_read_cb);
+
+	test_complex_read_pipe2_read_called++;
+
+	assert(read(fd, buf, BUF_SIZE) == strlen(READ_STR) + 1);
+	assert(memcmp(buf, READ_STR, strlen(READ_STR) + 1) == 0);
+
+	return (0);
+}
+
+static int
+test_complex_write_pipe2_read_cb(int fd, void *user_data1, void *user_data2)
+{
+
+	assert(0);
+
+	return (-1);
+}
+
+static int
+test_complex_set_events_pipe2_write_cb(PRFileDesc *prfd, short *events, void *user_data1, void *user_data2)
+{
+
+	test_complex_set_events_pipe2_write_called++;
+
+	assert(user_data1 == &test_complex_set_events_pipe2_write_called);
+	assert(user_data2 == test_complex_set_events_pipe2_write_cb);
+	assert(*events == POLLOUT);
+
+	return (0);
+}
+
+static int
+test_complex_read_pipe2_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+
+	assert(0);
+
+	return (-1);
+}
+
+static int
+test_complex_write_pipe2_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+{
+
+	assert(user_data1 == &test_complex_set_events_pipe2_write_called);
+	assert(user_data2 == test_complex_set_events_pipe2_write_cb);
+	test_complex_write_pipe2_write_called++;
 
 	return (0);
 }
@@ -634,6 +798,207 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 	assert(PR_DestroySocketPollFd(read_pipe) == PR_SUCCESS);
 }
 
+static void
+test_complex(struct pr_poll_loop *poll_loop)
+{
+	int pipe_fd1[2], pipe_fd2[2];
+	PRFileDesc *read_pipe1;
+	PRFileDesc *write_pipe2;
+	struct timer_list_entry *timeout_timer;
+
+	assert(pipe(pipe_fd1) == 0);
+	assert(pipe(pipe_fd2) == 0);
+
+	test_complex_read_pipe1_fd = pipe_fd1[0];
+
+	assert((read_pipe1 = PR_CreateSocketPollFd(pipe_fd1[0])) != NULL);
+	assert((write_pipe2 = PR_CreateSocketPollFd(pipe_fd2[1])) != NULL);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, read_pipe1, 0, test_complex_set_events_pipe1_read_cb,
+	    test_complex_read_pipe1_read_cb, test_complex_write_pipe1_read_cb, NULL,
+	    &test_complex_set_events_pipe1_read_called, test_complex_set_events_pipe1_read_cb) == 0);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[1], 0, test_complex_set_events_pipe1_write_cb,
+	    test_complex_read_pipe1_write_cb, test_complex_write_pipe1_write_cb, NULL,
+	    &test_complex_set_events_pipe1_write_called, test_complex_set_events_pipe1_write_cb) == 0);
+
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd2[0], POLLIN, test_complex_set_events_pipe2_read_cb,
+	    test_complex_read_pipe2_read_cb, test_complex_write_pipe2_read_cb, NULL,
+	    &test_complex_set_events_pipe2_read_called, test_complex_set_events_pipe2_read_cb) == 0);
+
+	assert(pr_poll_loop_add_prfd(poll_loop, write_pipe2, POLLOUT, test_complex_set_events_pipe2_write_cb,
+	    test_complex_read_pipe2_write_cb, test_complex_write_pipe2_write_cb, NULL,
+	    &test_complex_set_events_pipe2_write_called, test_complex_set_events_pipe2_write_cb) == 0);
+
+	/*
+	 * Call for first time -> all set_events should be called and pipe2_write should be called
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 1);
+	assert(test_complex_read_pipe1_read_called == 0);
+	assert(test_complex_set_events_pipe1_write_called == 1);
+	assert(test_complex_write_pipe1_write_called == 0);
+	assert(test_complex_set_events_pipe2_read_called == 1);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 1);
+	assert(test_complex_write_pipe2_write_called == 1);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Call for second time -> same as first time
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 2);
+	assert(test_complex_read_pipe1_read_called == 0);
+	assert(test_complex_set_events_pipe1_write_called == 2);
+	assert(test_complex_write_pipe1_write_called == 0);
+	assert(test_complex_set_events_pipe2_read_called == 2);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 2);
+	assert(test_complex_write_pipe2_write_called == 2);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Change state to prepare for writing
+	 */
+	test_complex_state = 1;
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 3);
+	assert(test_complex_read_pipe1_read_called == 0);
+	assert(test_complex_set_events_pipe1_write_called == 3);
+	assert(test_complex_write_pipe1_write_called == 1);
+	assert(test_complex_set_events_pipe2_read_called == 3);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 3);
+	assert(test_complex_write_pipe2_write_called == 3);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Write to first pipe
+	 */
+	assert(write(pipe_fd1[1], READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 4);
+	assert(test_complex_read_pipe1_read_called == 0);
+	assert(test_complex_set_events_pipe1_write_called == 4);
+	assert(test_complex_write_pipe1_write_called == 2);
+	assert(test_complex_set_events_pipe2_read_called == 4);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 4);
+	assert(test_complex_write_pipe2_write_called == 4);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Change state so write can propagate
+	 */
+	test_complex_state = 2;
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 5);
+	assert(test_complex_read_pipe1_read_called == 1);
+	assert(test_complex_set_events_pipe1_write_called == 5);
+	assert(test_complex_write_pipe1_write_called == 2);
+	assert(test_complex_set_events_pipe2_read_called == 5);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 5);
+	assert(test_complex_write_pipe2_write_called == 5);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Change state so pipe1 events are not called any longer
+	 */
+	test_complex_state = 4;
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 6);
+	assert(test_complex_read_pipe1_read_called == 1);
+	assert(test_complex_set_events_pipe1_write_called == 6);
+	assert(test_complex_write_pipe1_write_called == 2);
+	assert(test_complex_set_events_pipe2_read_called == 6);
+	assert(test_complex_read_pipe2_read_called == 0);
+	assert(test_complex_set_events_pipe2_write_called == 6);
+	assert(test_complex_write_pipe2_write_called == 6);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * Write to second pipe
+	 */
+	assert(write(pipe_fd2[1], READ_STR, strlen(READ_STR) + 1) == strlen(READ_STR) + 1);
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 7);
+	assert(test_complex_read_pipe1_read_called == 1);
+	assert(test_complex_set_events_pipe1_write_called == 7);
+	assert(test_complex_write_pipe1_write_called == 2);
+	assert(test_complex_set_events_pipe2_read_called == 7);
+	assert(test_complex_read_pipe2_read_called == 1);
+	assert(test_complex_set_events_pipe2_write_called == 7);
+	assert(test_complex_write_pipe2_write_called == 7);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
+	 * And call again
+	 */
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == 0);
+
+	assert(test_complex_set_events_pipe1_read_called == 8);
+	assert(test_complex_read_pipe1_read_called == 1);
+	assert(test_complex_set_events_pipe1_write_called == 8);
+	assert(test_complex_write_pipe1_write_called == 2);
+	assert(test_complex_set_events_pipe2_read_called == 8);
+	assert(test_complex_read_pipe2_read_called == 1);
+	assert(test_complex_set_events_pipe2_write_called == 8);
+	assert(test_complex_write_pipe2_write_called == 8);
+
+	assert(timeout_cb_called == 0);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	assert(PR_DestroySocketPollFd(read_pipe1) == PR_SUCCESS);
+	assert(PR_DestroySocketPollFd(write_pipe2) == PR_SUCCESS);
+
+	assert(close(pipe_fd1[0]) == 0);
+	assert(close(pipe_fd1[1]) == 0);
+
+	assert(close(pipe_fd2[0]) == 0);
+	assert(close(pipe_fd2[1]) == 0);
+}
+
 int
 main(void)
 {
@@ -646,6 +1011,8 @@ main(void)
 	test_fd_basics(&poll_loop);
 
 	test_prfd_basics(&poll_loop);
+
+	test_complex(&poll_loop);
 
 	pr_poll_loop_destroy(&poll_loop);
 
