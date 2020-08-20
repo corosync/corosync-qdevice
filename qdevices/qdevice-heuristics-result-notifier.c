@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -61,7 +61,8 @@ qdevice_heuristics_result_notifier_list_get(struct qdevice_heuristics_result_not
 
 struct qdevice_heuristics_result_notifier_item *
 qdevice_heuristics_result_notifier_list_add(struct qdevice_heuristics_result_notifier_list *notifier_list,
-    qdevice_heuristics_result_notifier_callback callback)
+    qdevice_heuristics_result_notifier_callback callback,
+    void *user_data1, void *user_data2)
 {
 	struct qdevice_heuristics_result_notifier_item *item;
 
@@ -77,6 +78,8 @@ qdevice_heuristics_result_notifier_list_add(struct qdevice_heuristics_result_not
 	memset(item, 0, sizeof(*item));
 	item->callback = callback;
 	item->active = 0;
+	item->user_data1 = user_data1;
+	item->user_data2 = user_data2;
 
 	TAILQ_INSERT_TAIL(notifier_list, item, entries);
 
@@ -125,7 +128,7 @@ qdevice_heuristics_result_notifier_notify(struct qdevice_heuristics_result_notif
 			continue ;
 		}
 
-		if (item->callback(heuristics_instance, seq_number, exec_result) != 0) {
+		if (item->callback(seq_number, exec_result, item->user_data1, item->user_data2) != 0) {
 			return (-1);
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -65,8 +65,6 @@ struct qdevice_heuristics_instance {
 	uint32_t expected_reply_seq_number;
 
 	struct qdevice_heuristics_exec_list exec_list;
-
-	struct qdevice_instance *qdevice_instance_ptr;
 
 	struct qdevice_heuristics_result_notifier_list exec_result_notifier_list;
 };

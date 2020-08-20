@@ -84,14 +84,10 @@ qdevice_votequorum_quorum_notify_callback(votequorum_handle_t votequorum_handle,
 
 static int
 qdevice_votequorum_heuristics_exec_result_callback(
-    void *heuristics_instance_ptr,
-    uint32_t seq_number, enum qdevice_heuristics_exec_result exec_result)
+    uint32_t seq_number, enum qdevice_heuristics_exec_result exec_result,
+    void *user_data1, void *user_data2)
 {
-	struct qdevice_heuristics_instance *heuristics_instance;
-	struct qdevice_instance *instance;
-
-	heuristics_instance = (struct qdevice_heuristics_instance *)heuristics_instance_ptr;
-	instance = heuristics_instance->qdevice_instance_ptr;
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
 
 	if (qdevice_heuristics_result_notifier_list_set_active(
 	    &instance->heuristics_instance.exec_result_notifier_list,
@@ -257,7 +253,7 @@ qdevice_votequorum_init(struct qdevice_instance *instance)
 	}
 
 	if (qdevice_heuristics_result_notifier_list_add(&instance->heuristics_instance.exec_result_notifier_list,
-	    qdevice_votequorum_heuristics_exec_result_callback) == NULL) {
+	    qdevice_votequorum_heuristics_exec_result_callback, instance, NULL) == NULL) {
 		log(LOG_CRIT, "Can't add votequrorum heuristics exec callback into notifier");
 		exit(EXIT_FAILURE);
 	}

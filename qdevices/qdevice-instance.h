@@ -129,6 +129,8 @@ extern int	qdevice_instance_configure_from_cmap(struct qdevice_instance *instanc
 
 extern int	qdevice_instance_configure_from_cmap_heuristics(struct qdevice_instance *instance);
 
+extern int	qdevice_instance_wait_for_initial_heuristics_exec_result(struct qdevice_instance *instance);
+
 #ifdef __cplusplus
 }
 #endif

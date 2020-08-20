@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -46,12 +46,14 @@
 extern "C" {
 #endif
 
-typedef int (*qdevice_heuristics_result_notifier_callback)(void *heuristics_instance, uint32_t seq_number,
-    enum qdevice_heuristics_exec_result exec_result);
+typedef int (*qdevice_heuristics_result_notifier_callback)(uint32_t seq_number,
+    enum qdevice_heuristics_exec_result exec_result, void *user_data1, void *user_data2);
 
 struct qdevice_heuristics_result_notifier_item {
 	qdevice_heuristics_result_notifier_callback callback;
 	int active;
+	void *user_data1;
+	void *user_data2;
 	TAILQ_ENTRY(qdevice_heuristics_result_notifier_item) entries;
 };
 
@@ -62,7 +64,8 @@ extern void						 qdevice_heuristics_result_notifier_list_init(
 
 extern struct qdevice_heuristics_result_notifier_item	*qdevice_heuristics_result_notifier_list_add(
     struct qdevice_heuristics_result_notifier_list *notifier_list,
-    qdevice_heuristics_result_notifier_callback callback);
+    qdevice_heuristics_result_notifier_callback callback,
+    void *user_data, void *user_data2);
 
 extern struct qdevice_heuristics_result_notifier_item	*qdevice_heuristics_result_notifier_list_get(
     struct qdevice_heuristics_result_notifier_list *notifier_list,

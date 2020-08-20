@@ -196,7 +196,6 @@ main(int argc, char * const argv[])
 	qdevice_instance_init(&instance, &advanced_settings);
 
 	qdevice_heuristics_init(&instance.heuristics_instance, &advanced_settings);
-	instance.heuristics_instance.qdevice_instance_ptr = &instance;
 
 	qdevice_cmap_init(&instance);
 	if (qdevice_log_init(&instance, foreground, force_debug, bump_log_priority) == -1) {
@@ -264,7 +263,7 @@ main(int argc, char * const argv[])
 	}
 
 	log(LOG_DEBUG, "Waiting for initial heuristics exec result");
-	if (qdevice_heuristics_wait_for_initial_exec_result(&instance.heuristics_instance) != 0) {
+	if (qdevice_instance_wait_for_initial_heuristics_exec_result(&instance) != 0) {
 		return (EXIT_FAILURE);
 	}
 

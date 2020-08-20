@@ -60,8 +60,8 @@ qdevice_net_heuristics_exec_result_to_tlv(enum qdevice_heuristics_exec_result ex
 }
 
 static int
-qdevice_net_regular_heuristics_exec_result_callback(void *heuristics_instance_ptr,
-    uint32_t seq_number, enum qdevice_heuristics_exec_result exec_result)
+qdevice_net_regular_heuristics_exec_result_callback(uint32_t seq_number,
+    enum qdevice_heuristics_exec_result exec_result, void *user_data1, void *user_data2)
 {
 	struct qdevice_heuristics_instance *heuristics_instance;
 	struct qdevice_instance *instance;
@@ -70,8 +70,8 @@ qdevice_net_regular_heuristics_exec_result_callback(void *heuristics_instance_pt
 	enum tlv_vote vote;
 	enum tlv_heuristics heuristics;
 
-	heuristics_instance = (struct qdevice_heuristics_instance *)heuristics_instance_ptr;
-	instance = heuristics_instance->qdevice_instance_ptr;
+	instance = (struct qdevice_instance *)user_data1;
+	heuristics_instance = &instance->heuristics_instance;
 	net_instance = instance->model_data;
 
 	if (qdevice_heuristics_result_notifier_list_set_active(&heuristics_instance->exec_result_notifier_list,
@@ -179,8 +179,8 @@ qdevice_net_regular_heuristics_exec_result_callback(void *heuristics_instance_pt
 }
 
 static int
-qdevice_net_connect_heuristics_exec_result_callback(void *heuristics_instance_ptr,
-    uint32_t seq_number, enum qdevice_heuristics_exec_result exec_result)
+qdevice_net_connect_heuristics_exec_result_callback(uint32_t seq_number,
+    enum qdevice_heuristics_exec_result exec_result, void *user_data1, void *user_data2)
 {
 	struct qdevice_heuristics_instance *heuristics_instance;
 	struct qdevice_instance *instance;
@@ -193,8 +193,8 @@ qdevice_net_connect_heuristics_exec_result_callback(void *heuristics_instance_pt
 	struct tlv_ring_id tlv_rid;
 	enum tlv_quorate quorate;
 
-	heuristics_instance = (struct qdevice_heuristics_instance *)heuristics_instance_ptr;
-	instance = heuristics_instance->qdevice_instance_ptr;
+	instance = (struct qdevice_instance *)user_data1;
+	heuristics_instance = &instance->heuristics_instance;
 	net_instance = instance->model_data;
 
 	if (qdevice_heuristics_result_notifier_list_set_active(&heuristics_instance->exec_result_notifier_list,
@@ -417,7 +417,8 @@ qdevice_net_heuristics_init(struct qdevice_net_instance *net_instance)
 
 	if (qdevice_heuristics_result_notifier_list_add(
 	    &net_instance->qdevice_instance_ptr->heuristics_instance.exec_result_notifier_list,
-	    qdevice_net_regular_heuristics_exec_result_callback) == NULL) {
+	    qdevice_net_regular_heuristics_exec_result_callback,
+	    net_instance->qdevice_instance_ptr, NULL) == NULL) {
 		log(LOG_ERR, "Can't add net regular heuristics exec callback into notifier");
 
 		return (-1);
@@ -425,7 +426,8 @@ qdevice_net_heuristics_init(struct qdevice_net_instance *net_instance)
 
 	if (qdevice_heuristics_result_notifier_list_add(
 	    &net_instance->qdevice_instance_ptr->heuristics_instance.exec_result_notifier_list,
-	    qdevice_net_connect_heuristics_exec_result_callback) == NULL) {
+	    qdevice_net_connect_heuristics_exec_result_callback,
+	    net_instance->qdevice_instance_ptr, NULL) == NULL) {
 		log(LOG_ERR, "Can't add net connect heuristics exec callback into notifier");
 
 		return (-1);

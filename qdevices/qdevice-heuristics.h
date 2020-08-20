@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -60,9 +60,6 @@ extern int		qdevice_heuristics_waiting_for_result(
 extern int		qdevice_heuristics_change_exec_list(
     struct qdevice_heuristics_instance *instance,
     const struct qdevice_heuristics_exec_list *new_exec_list, int sync_in_progress);
-
-extern int		qdevice_heuristics_wait_for_initial_exec_result(
-    struct qdevice_heuristics_instance *instance);
 
 #ifdef __cplusplus
 }
