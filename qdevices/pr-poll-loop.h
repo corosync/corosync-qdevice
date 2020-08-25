@@ -125,6 +125,7 @@ extern int			 pr_poll_loop_del_prfd(struct pr_poll_loop *poll_loop,
  *  0 - No error and all callbacks returned 0
  * -1 - Either set_events returned -2 or some other callbacks returned -1
  * -2 - Other error (events is not POLLIN|POLLOUT, or set_events cb was not 0, -1 or -2)
+ * -3 - PR_Poll returned -1
  */
 extern int			 pr_poll_loop_exec(struct pr_poll_loop *poll_loop);
 

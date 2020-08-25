@@ -484,6 +484,10 @@ pr_poll_loop_exec(struct pr_poll_loop *poll_loop)
 		}
 	}
 
+	if (poll_res == -1) {
+		return (-3);
+	}
+
 	timer_list_expire(&poll_loop->tlist);
 
 	return (0);

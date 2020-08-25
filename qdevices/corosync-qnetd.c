@@ -468,6 +468,9 @@ main(int argc, char * const argv[])
 	if (poll_res == -2) {
 		log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
 		return (EXIT_FAILURE);
+	} else if (poll_res == -3) {
+		log_nss(LOG_CRIT, "pr_poll_loop_exec returned -3 - PR_Poll error");
+		return (EXIT_FAILURE);
 	}
 
 	/*
