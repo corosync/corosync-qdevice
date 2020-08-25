@@ -41,11 +41,6 @@
 #include "dynar-str.h"
 
 /*
- * Needed for creating nspr handle from unix fd
- */
-#include <private/pprio.h>
-
-/*
  * Callbacks
  */
 
