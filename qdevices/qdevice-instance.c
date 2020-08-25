@@ -39,10 +39,6 @@
 #include "qdevice-config.h"
 #include "qdevice-instance.h"
 #include "qdevice-heuristics-exec-list.h"
-/*TODO Remove this 3 line includes when porting on pr-poll-loop */
-#include "qdevice-heuristics.h"
-#include "qdevice-heuristics-cmd.h"
-#include "qdevice-votequorum.h"
 #include "qdevice-model.h"
 #include "utils.h"
 
@@ -57,6 +53,7 @@ qdevice_instance_init(struct qdevice_instance *instance,
 
 	instance->vq_last_poll = ((time_t) -1);
 	instance->advanced_settings = advanced_settings;
+	pr_poll_loop_init(&instance->main_poll_loop);
 
 	return (0);
 }
@@ -66,6 +63,7 @@ qdevice_instance_destroy(struct qdevice_instance *instance)
 {
 
 	node_list_free(&instance->config_node_list);
+	pr_poll_loop_destroy(&instance->main_poll_loop);
 
 	return (0);
 }
@@ -294,158 +292,6 @@ qdevice_instance_configure_from_cmap(struct qdevice_instance *instance)
 
 	if (qdevice_instance_configure_from_cmap_heuristics(instance) != 0) {
 		return (-1);
-	}
-
-	return (0);
-}
-
-#define QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS		5
-
-int
-qdevice_instance_wait_for_initial_heuristics_exec_result(struct qdevice_instance *instance)
-{
-	struct pollfd pfds[QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS];
-	int no_pfds;
-	int poll_res;
-	int timeout;
-	int i;
-	int case_processed;
-	int res;
-
-	while (!instance->vq_node_list_initial_heuristics_finished) {
-		no_pfds = 0;
-
-		assert(no_pfds < QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS);
-		pfds[no_pfds].fd = instance->heuristics_instance.pipe_log_recv;
-		pfds[no_pfds].events = POLLIN;
-		pfds[no_pfds].revents = 0;
-		no_pfds++;
-
-		assert(no_pfds < QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS);
-		pfds[no_pfds].fd = instance->heuristics_instance.pipe_cmd_recv;
-		pfds[no_pfds].events = POLLIN;
-		pfds[no_pfds].revents = 0;
-		no_pfds++;
-
-		assert(no_pfds < QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS);
-		pfds[no_pfds].fd = instance->votequorum_poll_fd;
-		pfds[no_pfds].events = POLLIN;
-		pfds[no_pfds].revents = 0;
-		no_pfds++;
-
-		if (!send_buffer_list_empty(&instance->heuristics_instance.cmd_out_buffer_list)) {
-			assert(no_pfds < QDEVICE_HEURISTICS_WAIT_FOR_INITIAL_EXEC_RESULT_MAX_PFDS);
-			pfds[no_pfds].fd = instance->heuristics_instance.pipe_cmd_send;
-			pfds[no_pfds].events = POLLOUT;
-			pfds[no_pfds].revents = 0;
-			no_pfds++;
-		}
-
-		/*
-		 * We know this is never larger than QDEVICE_DEFAULT_HEURISTICS_MAX_TIMEOUT * 2
-		 */
-		timeout = (int)instance->heuristics_instance.sync_timeout * 2;
-
-		poll_res = poll(pfds, no_pfds, timeout);
-		if (poll_res > 0) {
-			for (i = 0; i < no_pfds; i++) {
-				if (pfds[i].revents & POLLIN) {
-					case_processed = 0;
-					switch (i) {
-					case 0:
-						case_processed = 1;
-
-						res = qdevice_heuristics_log_read_from_pipe(&instance->heuristics_instance);
-						if (res == -1) {
-							return (-1);
-						}
-						break;
-					case 1:
-						case_processed = 1;
-						res = qdevice_heuristics_cmd_read_from_pipe(&instance->heuristics_instance);
-						if (res == -1) {
-							return (-1);
-						}
-						break;
-					case 2:
-						case_processed = 1;
-						res = qdevice_votequorum_dispatch(instance);
-						if (res == -1) {
-							return (-1);
-						}
-					case 3:
-						/*
-						 * Read on heuristics cmd send fs shouldn't happen
-						 */
-						 break;
-					}
-
-					if (!case_processed) {
-						log(LOG_CRIT, "Unhandled read on poll descriptor %u", i);
-						exit(EXIT_FAILURE);
-					}
-				}
-
-				if (pfds[i].revents & POLLOUT) {
-					case_processed = 0;
-					switch (i) {
-					case 0:
-					case 1:
-					case 2:
-						/*
-						 * Write on heuristics log, cmd recv or vq shouldn't happen
-						 */
-						break;
-					case 3:
-						case_processed = 1;
-						res = qdevice_heuristics_cmd_write(&instance->heuristics_instance);
-						if (res == -1) {
-							return (-1);
-						}
-						break;
-					}
-
-					if (!case_processed) {
-						log(LOG_CRIT, "Unhandled write on poll descriptor %u", i);
-						exit(EXIT_FAILURE);
-					}
-				}
-
-				if ((pfds[i].revents & (POLLERR|POLLHUP|POLLNVAL)) &&
-				    !(pfds[i].revents & (POLLIN|POLLOUT))) {
-					switch (i) {
-					case 0:
-					case 1:
-					case 3:
-						/*
-						 *  Closed pipe doesn't mean return of POLLIN. To display
-						 * better log message, we call read log as if POLLIN would
-						 * be set.
-						 */
-						res = qdevice_heuristics_log_read_from_pipe(&instance->heuristics_instance);
-						if (res == -1) {
-							return (-1);
-						}
-
-						log(LOG_ERR, "POLLERR (%u) on heuristics pipe. Exiting",
-						    pfds[i].revents);
-						return (-1);
-						break;
-					case 2:
-						log(LOG_ERR, "POLLERR (%u) on corosync socket. Exiting",
-						    pfds[i].revents);
-						return (-1);
-						break;
-					}
-				}
-			}
-		} else if (poll_res == 0) {
-			log(LOG_ERR, "Timeout waiting for initial heuristics exec result");
-			return (-1);
-		} else {
-			log_err(LOG_ERR, "Initial heuristics exec result poll failed");
-			return (-1);
-		}
 	}
 
 	return (0);

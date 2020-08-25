@@ -47,6 +47,8 @@
 #include "qdevice-ipc.h"
 #include "qdevice-log.h"
 #include "qdevice-model.h"
+#include "qdevice-pr-poll-loop.h"
+#include "qdevice-pr-poll-loop-cb.h"
 #include "qdevice-votequorum.h"
 #include "utils.h"
 
@@ -257,13 +259,18 @@ main(int argc, char * const argv[])
 		return (EXIT_FAILURE);
 	}
 
+	log(LOG_DEBUG, "Registering main poll loop callbacks");
+	if (qdevice_pr_poll_loop_cb_register(&instance) != 0) {
+		return (EXIT_FAILURE);
+	}
+
 	log(LOG_DEBUG, "Waiting for ring id");
 	if (qdevice_votequorum_wait_for_ring_id(&instance) != 0) {
 		return (EXIT_FAILURE);
 	}
 
 	log(LOG_DEBUG, "Waiting for initial heuristics exec result");
-	if (qdevice_instance_wait_for_initial_heuristics_exec_result(&instance) != 0) {
+	if (qdevice_pr_poll_loop_wait_for_initial_heuristics_exec_result(&instance) != 0) {
 		return (EXIT_FAILURE);
 	}
 

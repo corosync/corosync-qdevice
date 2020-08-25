@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -47,6 +47,7 @@
 #include "qdevice-heuristics.h"
 #include "qdevice-model-type.h"
 #include "node-list.h"
+#include "pr-poll-loop.h"
 #include "unix-socket-ipc.h"
 
 #ifdef __cplusplus
@@ -118,6 +119,17 @@ struct qdevice_instance {
 	int sync_in_progress;
 
 	struct qdevice_heuristics_instance heuristics_instance;
+
+	struct pr_poll_loop main_poll_loop;
+
+	/*
+	 * Set by poll handler when votequorum connection is closed
+	 */
+	int votequorum_closed;
+	/*
+	 * Set by poll handler when one of the heuristics pipes becomes closed
+	 */
+	int heuristics_closed;
 };
 
 extern int	qdevice_instance_init(struct qdevice_instance *instance,

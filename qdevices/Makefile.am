@@ -143,7 +143,9 @@ corosync_qdevice_SOURCES = corosync-qdevice.c \
                            process-list.h process-list.c \
                            qdevice-net-heuristics.c qdevice-net-heuristics.h \
                            qdevice-heuristics-result-notifier.c qdevice-heuristics-result-notifier.h \
-                           log.c log.h
+                           log.c log.h pr-poll-loop.c pr-poll-loop.h \
+                           qdevice-pr-poll-loop-cb.c qdevice-pr-poll-loop-cb.h \
+                           qdevice-pr-poll-loop.c qdevice-pr-poll-loop.h
 
 corosync_qdevice_tool_SOURCES = corosync-qdevice-tool.c unix-socket.c unix-socket.h dynar.c dynar.h \
                                 dynar-str.c dynar-str.h utils.c utils.h
