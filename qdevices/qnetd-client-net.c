@@ -67,7 +67,7 @@ qnetd_client_net_socket_poll_loop_set_events_cb(PRFileDesc *prfd, short *events,
 		qnetd_instance_client_disconnect(instance, client, 0);
 
 		if (pr_poll_loop_del_prfd(&instance->main_poll_loop, prfd) == -1) {
-			log(LOG_CRIT, "pr_poll_loop_del_prfd for client socket failed");
+			log(LOG_ERR, "pr_poll_loop_del_prfd for client socket failed");
 
 			return (-2);
 		}
@@ -317,7 +317,7 @@ qnetd_client_net_accept(struct qnetd_instance *instance)
 	    qnetd_client_net_socket_poll_loop_write_cb,
 	    qnetd_client_net_socket_poll_loop_err_cb,
 	    instance, client) == -1) {
-		log_err(LOG_CRIT, "Can't add client to main poll loop");
+		log(LOG_ERR, "Can't add client to main poll loop");
 		res_err = -2;
 		goto exit_close;
 	}

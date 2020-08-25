@@ -102,7 +102,7 @@ ipc_client_socket_poll_loop_set_events_cb(int fd, short *events, void *user_data
 		qnetd_ipc_client_disconnect(instance, ipc_client);
 
 		if (pr_poll_loop_del_fd(&instance->main_poll_loop, fd) == -1) {
-			log(LOG_CRIT, "pr_poll_loop_del_fd for ipc client socket failed");
+			log(LOG_ERR, "pr_poll_loop_del_fd for ipc client socket failed");
 
 			return (-2);
 		}
@@ -189,7 +189,7 @@ qnetd_ipc_init(struct qnetd_instance *instance)
 	    ipc_socket_poll_loop_read_cb,
 	    NULL,
 	    ipc_socket_poll_loop_err_cb, instance, NULL) == -1) {
-		log_err(LOG_CRIT, "Can't add IPC socket to main poll loop");
+		log(LOG_ERR, "Can't add IPC socket to main poll loop");
 
 		return (-1);
 	}
@@ -283,7 +283,7 @@ qnetd_ipc_accept(struct qnetd_instance *instance, struct unix_socket_client **re
 	    ipc_client_socket_poll_loop_read_cb,
 	    ipc_client_socket_poll_loop_write_cb,
 	    ipc_client_socket_poll_loop_err_cb, instance, *res_client) == -1) {
-		log_err(LOG_CRIT, "Can't add IPC client socket to main poll loop");
+		log(LOG_ERR, "Can't add IPC client socket to main poll loop");
 		res = -1;
 
 		qnetd_ipc_client_disconnect(instance, *res_client);
