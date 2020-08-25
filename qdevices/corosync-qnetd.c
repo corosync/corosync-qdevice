@@ -100,18 +100,6 @@ server_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_d
 }
 
 static int
-server_socket_poll_loop_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
-{
-
-	/*
-	 * Poll write on listen socket -> fatal error
-	 */
-	log(LOG_CRIT, "POLL_WRITE on listening socket");
-
-	return (-1);
-}
-
-static int
 server_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
 {
 
@@ -437,7 +425,7 @@ main(int argc, char * const argv[])
 	if (pr_poll_loop_add_prfd(&instance.main_poll_loop, instance.server.socket, POLLIN,
 	    NULL,
 	    server_socket_poll_loop_read_cb,
-	    server_socket_poll_loop_write_cb,
+	    NULL,
 	    server_socket_poll_loop_err_cb,
 	    &instance, NULL) != 0) {
 		log(LOG_ERR, "Can't add server socket to main poll loop");

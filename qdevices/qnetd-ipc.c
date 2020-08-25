@@ -78,15 +78,6 @@ ipc_socket_poll_loop_read_cb(int fd, void *user_data1, void *user_data2)
 }
 
 static int
-ipc_socket_poll_loop_write_cb(int fd, void *user_data1, void *user_data2)
-{
-
-	log(LOG_CRIT, "POLL_WRITE on listening IPC socket");
-
-	return (-1);
-}
-
-static int
 ipc_socket_poll_loop_err_cb(int fd, short revents, void *user_data1, void *user_data2)
 {
 
@@ -201,7 +192,7 @@ qnetd_ipc_init(struct qnetd_instance *instance)
 	if (pr_poll_loop_add_fd(&instance->main_poll_loop, instance->local_ipc.socket, POLLIN,
 	    ipc_socket_poll_loop_set_events_cb,
 	    ipc_socket_poll_loop_read_cb,
-	    ipc_socket_poll_loop_write_cb,
+	    NULL,
 	    ipc_socket_poll_loop_err_cb, instance, NULL) == -1) {
 		log_err(LOG_CRIT, "Can't add IPC socket to main poll loop");
 
