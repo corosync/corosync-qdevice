@@ -444,7 +444,7 @@ pr_poll_loop_exec(struct pr_poll_loop *poll_loop)
 					cb_res = fd_entry->fd_read_cb(fd_entry->fd,
 					    fd_entry->user_data1, fd_entry->user_data2);
 				} else {
-					cb_res = fd_entry->prfd_read_cb(fd_entry->prfd,
+					cb_res = fd_entry->prfd_read_cb(fd_entry->prfd, &pfds[i],
 					    fd_entry->user_data1, fd_entry->user_data2);
 				}
 
@@ -459,7 +459,7 @@ pr_poll_loop_exec(struct pr_poll_loop *poll_loop)
 					cb_res = fd_entry->fd_write_cb(fd_entry->fd,
 					    fd_entry->user_data1, fd_entry->user_data2);
 				} else {
-					cb_res = fd_entry->prfd_write_cb(fd_entry->prfd,
+					cb_res = fd_entry->prfd_write_cb(fd_entry->prfd, &pfds[i],
 					    fd_entry->user_data1, fd_entry->user_data2);
 				}
 
@@ -478,6 +478,7 @@ pr_poll_loop_exec(struct pr_poll_loop *poll_loop)
 					} else {
 						cb_res = fd_entry->prfd_err_cb(fd_entry->prfd,
 						    pr_events_to_poll_events(pfds[i].out_flags),
+						    &pfds[i],
 						    fd_entry->user_data1, fd_entry->user_data2);
 					}
 

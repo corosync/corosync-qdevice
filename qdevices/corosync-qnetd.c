@@ -90,7 +90,7 @@ qnetd_warn_nss(void)
 }
 
 static int
-server_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+server_socket_poll_loop_read_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
 
@@ -100,7 +100,8 @@ server_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_d
 }
 
 static int
-server_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+server_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, const PRPollDesc *pd,
+    void *user_data1, void *user_data2)
 {
 
 	if (revents != POLLNVAL) {

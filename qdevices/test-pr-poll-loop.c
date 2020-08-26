@@ -194,7 +194,7 @@ prfd_set_events_cb2_return(PRFileDesc *prfd, short *events, void *user_data1, vo
 }
 
 static int
-prfd_read_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
+prfd_read_cb1(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 	char buf[BUF_SIZE];
 
@@ -210,7 +210,7 @@ prfd_read_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
 }
 
 static int
-prfd_read_cb2(PRFileDesc *prfd, void *user_data1, void *user_data2)
+prfd_read_cb2(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 	char buf[BUF_SIZE];
 
@@ -226,7 +226,7 @@ prfd_read_cb2(PRFileDesc *prfd, void *user_data1, void *user_data2)
 }
 
 static int
-prfd_write_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
+prfd_write_cb1(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 
 	assert(user_data1 == &prfd_write_cb1_called);
@@ -238,7 +238,7 @@ prfd_write_cb1(PRFileDesc *prfd, void *user_data1, void *user_data2)
 }
 
 static int
-prfd_err_cb1(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+prfd_err_cb1(PRFileDesc *prfd, short revents, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 
 	assert(user_data1 == &prfd_err_cb1_called);
@@ -267,7 +267,7 @@ test_complex_set_events_pipe1_read_cb(PRFileDesc *prfd, short *events, void *use
 }
 
 static int
-test_complex_read_pipe1_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+test_complex_read_pipe1_read_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 	char buf[BUF_SIZE];
 
@@ -286,7 +286,7 @@ test_complex_read_pipe1_read_cb(PRFileDesc *prfd, void *user_data1, void *user_d
 }
 
 static int
-test_complex_write_pipe1_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+test_complex_write_pipe1_read_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 
 	assert(0);
@@ -383,7 +383,7 @@ test_complex_set_events_pipe2_write_cb(PRFileDesc *prfd, short *events, void *us
 }
 
 static int
-test_complex_read_pipe2_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+test_complex_read_pipe2_write_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 
 	assert(0);
@@ -392,7 +392,7 @@ test_complex_read_pipe2_write_cb(PRFileDesc *prfd, void *user_data1, void *user_
 }
 
 static int
-test_complex_write_pipe2_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+test_complex_write_pipe2_write_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 
 	assert(user_data1 == &test_complex_set_events_pipe2_write_called);

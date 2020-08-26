@@ -84,7 +84,8 @@ qnetd_client_net_socket_poll_loop_set_events_cb(PRFileDesc *prfd, short *events,
 
 
 static int
-qnetd_client_net_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+qnetd_client_net_socket_poll_loop_read_cb(PRFileDesc *prfd, const PRPollDesc *pd,
+    void *user_data1, void *user_data2)
 {
 	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
 	struct qnetd_client *client = (struct qnetd_client *)user_data2;
@@ -99,7 +100,8 @@ qnetd_client_net_socket_poll_loop_read_cb(PRFileDesc *prfd, void *user_data1, vo
 }
 
 static int
-qnetd_client_net_socket_poll_loop_write_cb(PRFileDesc *prfd, void *user_data1, void *user_data2)
+qnetd_client_net_socket_poll_loop_write_cb(PRFileDesc *prfd, const PRPollDesc *pd,
+    void *user_data1, void *user_data2)
 {
 	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
 	struct qnetd_client *client = (struct qnetd_client *)user_data2;
@@ -114,7 +116,8 @@ qnetd_client_net_socket_poll_loop_write_cb(PRFileDesc *prfd, void *user_data1, v
 }
 
 static int
-qnetd_client_net_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents, void *user_data1, void *user_data2)
+qnetd_client_net_socket_poll_loop_err_cb(PRFileDesc *prfd, short revents,
+    const PRPollDesc *pd, void *user_data1, void *user_data2)
 {
 	struct qnetd_client *client = (struct qnetd_client *)user_data2;
 
