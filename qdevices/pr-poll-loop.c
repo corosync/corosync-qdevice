@@ -92,6 +92,10 @@ poll_events_to_pr_events(short events)
 		res |= PR_POLL_WRITE;
 	}
 
+	if (events & POLLPRI) {
+		res |= PR_POLL_EXCEPT;
+	}
+
 	return (res);
 }
 
@@ -123,7 +127,7 @@ pr_events_to_poll_events(PRInt16 events)
 	}
 
 	if (events & PR_POLL_EXCEPT) {
-		res |= POLLERR;
+		res |= POLLPRI;
 	}
 
 	return (res);
@@ -142,7 +146,7 @@ pr_poll_loop_add_fd_int(struct pr_poll_loop *poll_loop, int fd, PRFileDesc *prfd
 
 	assert((prfd != NULL && fd == -1) || (fd != -1 && prfd == NULL));
 
-	if ((events & ~(POLLIN|POLLOUT)) != 0) {
+	if ((events & ~(POLLIN|POLLOUT|POLLPRI)) != 0) {
 		return (-1);
 	}
 
@@ -275,7 +279,7 @@ int prepare_poll_array(struct pr_poll_loop *poll_loop)
 			res = 0;
 		}
 
-		if ((events & ~(POLLIN|POLLOUT)) != 0) {
+		if ((events & ~(POLLIN|POLLOUT|POLLPRI)) != 0) {
 			return (-2);
 		}
 
