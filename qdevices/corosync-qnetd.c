@@ -152,6 +152,25 @@ signal_handlers_register(void)
 	sigaction(SIGTERM, &act, NULL);
 }
 
+static int
+qnetd_run_main_loop(struct qnetd_instance *instance)
+{
+	int poll_res;
+
+	while ((poll_res = pr_poll_loop_exec(&instance->main_poll_loop)) == 0) {
+	}
+
+	if (poll_res == -2) {
+		log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
+		return (-1);
+	} else if (poll_res == -3) {
+		log_nss(LOG_CRIT, "pr_poll_loop_exec returned -3 - PR_Poll error");
+		return (-1);
+	}
+
+	return (poll_res);
+}
+
 static void
 usage(void)
 {
@@ -330,7 +349,7 @@ main(int argc, char * const argv[])
 	int lock_file;
 	int another_instance_running;
 	int log_target;
-	int poll_res;
+	int main_loop_res;
 
 	if (qnetd_advanced_settings_init(&advanced_settings) != 0) {
 		errx(EXIT_FAILURE, "Can't alloc memory for advanced settings");
@@ -447,19 +466,8 @@ main(int argc, char * const argv[])
 	sd_notify(0, "READY=1");
 #endif
 
-	/*
-	 * MAIN LOOP
-	 */
-	while ((poll_res = pr_poll_loop_exec(&instance.main_poll_loop)) == 0) {
-	}
-
-	if (poll_res == -2) {
-		log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
-		return (EXIT_FAILURE);
-	} else if (poll_res == -3) {
-		log_nss(LOG_CRIT, "pr_poll_loop_exec returned -3 - PR_Poll error");
-		return (EXIT_FAILURE);
-	}
+	log(LOG_DEBUG, "Running QNetd main loop");
+	main_loop_res = qnetd_run_main_loop(&instance);
 
 	/*
 	 * Cleanup
@@ -494,5 +502,5 @@ main(int argc, char * const argv[])
 	log(LOG_DEBUG, "Closing log");
 	log_close();
 
-	return (EXIT_SUCCESS);
+	return (main_loop_res == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }
