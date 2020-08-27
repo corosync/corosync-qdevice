@@ -77,6 +77,11 @@ typedef int (*pr_poll_loop_fd_err_cb_fn)(int fd, short revents, void *user_data1
 typedef int (*pr_poll_loop_prfd_err_cb_fn)(PRFileDesc *prfd, short revents, const PRPollDesc *pd,
     void *user_data1, void *user_data2);
 
+/*
+ * Return code: 0 - Ok, -1 - Return error
+ */
+typedef int (*pr_poll_loop_pre_poll_cb_fn)(void *user_data1, void *user_data2);
+
 struct pr_poll_loop_fd_entry {
 	int fd;
 	PRFileDesc *prfd;
@@ -94,8 +99,16 @@ struct pr_poll_loop_fd_entry {
 	TAILQ_ENTRY(pr_poll_loop_fd_entry) entries;
 };
 
+struct pr_poll_loop_pre_poll_cb_entry {
+	pr_poll_loop_pre_poll_cb_fn pre_poll_cb;
+	void *user_data1;
+	void *user_data2;
+	TAILQ_ENTRY(pr_poll_loop_pre_poll_cb_entry) entries;
+};
+
 struct pr_poll_loop {
 	TAILQ_HEAD(, pr_poll_loop_fd_entry) fd_list;
+	TAILQ_HEAD(, pr_poll_loop_pre_poll_cb_entry) pre_poll_cb_list;
 	struct timer_list tlist;
 	struct pr_poll_array poll_array;
 };
@@ -109,6 +122,10 @@ extern int			 pr_poll_loop_add_fd(struct pr_poll_loop *poll_loop, int fd,
     pr_poll_loop_fd_err_cb_fn fd_err_cb,
     void *user_data1, void *user_data2);
 
+extern int			 pr_poll_loop_add_pre_poll_cb(struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb,
+    void *user_data1, void *user_data2);
+
 extern int			 pr_poll_loop_add_prfd(struct pr_poll_loop *poll_loop,
     PRFileDesc *prfd, short events,
     pr_poll_loop_prfd_set_events_cb_fn prfd_set_events_cb,
@@ -118,6 +135,9 @@ extern int			 pr_poll_loop_add_prfd(struct pr_poll_loop *poll_loop,
     void *user_data1, void *user_data2);
 
 extern int			 pr_poll_loop_del_fd(struct pr_poll_loop *poll_loop, int fd);
+
+extern int			pr_poll_loop_del_pre_poll_cb(struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb);
 
 extern int			 pr_poll_loop_del_prfd(struct pr_poll_loop *poll_loop,
     PRFileDesc *prfd);

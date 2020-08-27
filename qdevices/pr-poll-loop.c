@@ -53,11 +53,11 @@
 /*
  * Helper functions declarations
  */
-static PRInt16				 poll_events_to_pr_events(short events);
+static PRInt16					 poll_events_to_pr_events(short events);
 
-static short				 pr_events_to_poll_events(PRInt16 events);
+static short					 pr_events_to_poll_events(PRInt16 events);
 
-static int				 pr_poll_loop_add_fd_int(struct pr_poll_loop *poll_loop,
+static int					 pr_poll_loop_add_fd_int(struct pr_poll_loop *poll_loop,
     int fd, PRFileDesc *prfd,
     short events, pr_poll_loop_fd_set_events_cb_fn fd_set_events_cb,
     pr_poll_loop_prfd_set_events_cb_fn prfd_set_events_cb,
@@ -66,11 +66,15 @@ static int				 pr_poll_loop_add_fd_int(struct pr_poll_loop *poll_loop,
     pr_poll_loop_fd_err_cb_fn fd_err_cb, pr_poll_loop_prfd_err_cb_fn prfd_err_cb,
     void *user_data1, void *user_data2);
 
-static int				 pr_poll_loop_del_fd_int(struct pr_poll_loop *poll_loop,
-    int fd, PRFileDesc *prfd);
+static int					 pr_poll_loop_del_fd_int(
+    struct pr_poll_loop *poll_loop, int fd, PRFileDesc *prfd);
 
-static struct pr_poll_loop_fd_entry	*pr_poll_loop_find_by_fd(
+static struct pr_poll_loop_fd_entry		*pr_poll_loop_find_by_fd(
     const struct pr_poll_loop *poll_loop, int fd, PRFileDesc *prfd);
+
+static struct pr_poll_loop_pre_poll_cb_entry	*pr_poll_loop_find_pre_poll_cb(
+    const struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb);
 
 static int				 prepare_poll_array(struct pr_poll_loop *poll_loop);
 
@@ -239,11 +243,28 @@ pr_poll_loop_find_by_fd(const struct pr_poll_loop *poll_loop, int fd, PRFileDesc
 	return (NULL);
 }
 
+static struct pr_poll_loop_pre_poll_cb_entry *
+pr_poll_loop_find_pre_poll_cb(const struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb)
+{
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry;
+
+	TAILQ_FOREACH(pre_poll_cb_entry, &poll_loop->pre_poll_cb_list, entries) {
+		if (pre_poll_cb_entry->pre_poll_cb == pre_poll_cb) {
+			return (pre_poll_cb_entry);
+		}
+	}
+
+	return (NULL);
+}
+
 static
 int prepare_poll_array(struct pr_poll_loop *poll_loop)
 {
 	struct pr_poll_loop_fd_entry *fd_entry;
 	struct pr_poll_loop_fd_entry *fd_entry_next;
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry;
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry_next;
 	struct pr_poll_loop_fd_entry **user_data;
 	short events;
 	int res;
@@ -253,6 +274,40 @@ int prepare_poll_array(struct pr_poll_loop *poll_loop)
 	poll_array = &poll_loop->poll_array;
 
 	pr_poll_array_clean(poll_array);
+
+	/*
+	 * Call pre poll callbacks
+	 */
+	pre_poll_cb_entry = TAILQ_FIRST(&poll_loop->pre_poll_cb_list);
+	while (pre_poll_cb_entry != NULL) {
+		pre_poll_cb_entry_next = TAILQ_NEXT(pre_poll_cb_entry, entries);
+
+		if (pre_poll_cb_entry->pre_poll_cb != NULL) {
+			res = pre_poll_cb_entry->pre_poll_cb(pre_poll_cb_entry->user_data1,
+			    pre_poll_cb_entry->user_data2);
+		} else {
+			res = 0;
+		}
+
+		switch (res) {
+		case 0:
+			/*
+			 * Continue
+			 */
+			break;
+		case -1:
+			/*
+			 * return immediately
+			 */
+			return (-1);
+			break;
+		default:
+			return (-2);
+			break;
+		}
+
+		pre_poll_cb_entry = pre_poll_cb_entry_next;
+	}
 
 	/*
 	 * Fill in poll_array
@@ -338,6 +393,7 @@ pr_poll_loop_init(struct pr_poll_loop *poll_loop)
 	memset(poll_loop, 0, sizeof(*poll_loop));
 
 	TAILQ_INIT(&(poll_loop->fd_list));
+	TAILQ_INIT(&(poll_loop->pre_poll_cb_list));
 
 	pr_poll_array_init(&poll_loop->poll_array, sizeof(struct pr_poll_loop_fd_entry *));
 	timer_list_init(&poll_loop->tlist);
@@ -348,6 +404,24 @@ pr_poll_loop_del_fd(struct pr_poll_loop *poll_loop, int fd)
 {
 
 	return (pr_poll_loop_del_fd_int(poll_loop, fd, NULL));
+}
+
+int
+pr_poll_loop_del_pre_poll_cb(struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb)
+{
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry;
+
+	pre_poll_cb_entry = pr_poll_loop_find_pre_poll_cb(poll_loop, pre_poll_cb);
+	if (pre_poll_cb_entry == NULL) {
+		return (-1);
+	}
+
+	TAILQ_REMOVE(&poll_loop->pre_poll_cb_list, pre_poll_cb_entry, entries);
+
+	free(pre_poll_cb_entry);
+
+	return (0);
 }
 
 int
@@ -362,6 +436,8 @@ pr_poll_loop_destroy(struct pr_poll_loop *poll_loop)
 {
 	struct pr_poll_loop_fd_entry *fd_entry;
 	struct pr_poll_loop_fd_entry *fd_entry_next;
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry;
+	struct pr_poll_loop_pre_poll_cb_entry *pre_poll_cb_entry_next;
 
 	fd_entry = TAILQ_FIRST(&poll_loop->fd_list);
 
@@ -378,6 +454,18 @@ pr_poll_loop_destroy(struct pr_poll_loop *poll_loop)
 	}
 
 	TAILQ_INIT(&(poll_loop->fd_list));
+
+	pre_poll_cb_entry = TAILQ_FIRST(&poll_loop->pre_poll_cb_list);
+
+	while (pre_poll_cb_entry != NULL) {
+		pre_poll_cb_entry_next = TAILQ_NEXT(pre_poll_cb_entry, entries);
+
+		free(pre_poll_cb_entry);
+
+		pre_poll_cb_entry = pre_poll_cb_entry_next;
+	}
+
+	TAILQ_INIT(&(poll_loop->pre_poll_cb_list));
 
 	pr_poll_array_destroy(&poll_loop->poll_array);
 	timer_list_free(&poll_loop->tlist);
@@ -398,6 +486,34 @@ pr_poll_loop_add_fd(struct pr_poll_loop *poll_loop, int fd,
 	    fd_set_events_cb, NULL, fd_read_cb, NULL, fd_write_cb, NULL,
 	    fd_err_cb, NULL,
 	    user_data1, user_data2));
+}
+
+int
+pr_poll_loop_add_pre_poll_cb(struct pr_poll_loop *poll_loop,
+    pr_poll_loop_pre_poll_cb_fn pre_poll_cb,
+    void *user_data1, void *user_data2)
+{
+	struct pr_poll_loop_pre_poll_cb_entry *new_entry;
+
+	if (pr_poll_loop_find_pre_poll_cb(poll_loop, pre_poll_cb) != NULL) {
+		return (-1);
+	}
+
+	new_entry = malloc(sizeof(*new_entry));
+	if (new_entry == NULL) {
+		return (-1);
+	}
+
+	memset(new_entry, 0, sizeof(*new_entry));
+
+	new_entry->pre_poll_cb = pre_poll_cb;
+
+	new_entry->user_data1 = user_data1;
+	new_entry->user_data2 = user_data2;
+
+	TAILQ_INSERT_TAIL(&poll_loop->pre_poll_cb_list, new_entry, entries);
+
+	return (0);
 }
 
 int
