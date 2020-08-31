@@ -33,6 +33,7 @@
  */
 
 #include "log.h"
+#include "qdevice-cmap.h"
 #include "qdevice-heuristics-cmd.h"
 #include "qdevice-heuristics-log.h"
 #include "qdevice-pr-poll-loop-cb.h"
@@ -149,6 +150,49 @@ votequorum_err_cb(int fd, short revents, void *user_data1, void *user_data2)
 	return (-1);
 }
 
+static int
+cmap_set_events_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+
+	if (instance->sync_in_progress) {
+		/*
+		 * During sync cmap is blocked -> don't add fd
+		 */
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+cmap_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+	int res;
+
+	res = qdevice_cmap_dispatch(instance);
+	if (res == -1) {
+		instance->cmap_closed = 1;
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+cmap_err_cb(int fd, short revents, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+
+	instance->cmap_closed = 1;
+
+	log(LOG_DEBUG, "POLL_ERR (%u) on corosync socket. "
+	     "Disconnecting.",  revents);
+
+	return (-1);
+}
+
 int
 qdevice_pr_poll_loop_cb_register(struct qdevice_instance *instance)
 {
@@ -180,6 +224,14 @@ qdevice_pr_poll_loop_cb_register(struct qdevice_instance *instance)
 
 	if (pr_poll_loop_add_fd(&instance->main_poll_loop, instance->votequorum_poll_fd,
 	    POLLIN, NULL, votequorum_read_cb, NULL, votequorum_err_cb,
+	    instance, NULL) != 0) {
+		log(LOG_ERR, "Can't add votequorum fd to main poll loop");
+
+		return (-1);
+	}
+
+	if (pr_poll_loop_add_fd(&instance->main_poll_loop, instance->cmap_poll_fd,
+	    POLLIN, cmap_set_events_cb, cmap_read_cb, NULL, cmap_err_cb,
 	    instance, NULL) != 0) {
 		log(LOG_ERR, "Can't add votequorum fd to main poll loop");
 

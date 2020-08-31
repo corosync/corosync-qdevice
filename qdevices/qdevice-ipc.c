@@ -40,9 +40,139 @@
 #include "dynar-str.h"
 #include "qdevice-ipc-cmd.h"
 
+/*
+ * Callbacks
+ */
+
+/*
+ * IPC server socket
+ */
+static int
+ipc_socket_poll_loop_set_events_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+
+	if (qdevice_ipc_is_closed(instance)) {
+		log(LOG_DEBUG, "Listening socket is closed");
+
+		return (-2);
+	}
+
+	return (0);
+}
+
+static int
+ipc_socket_poll_loop_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+	struct unix_socket_client *ipc_client;
+
+	qdevice_ipc_accept(instance, &ipc_client);
+
+	return (0);
+}
+
+static int
+ipc_socket_poll_loop_err_cb(int fd, short revents, void *user_data1, void *user_data2)
+{
+
+	if (revents != POLLNVAL) {
+		/*
+		 * Poll ERR on listening socket is fatal error.
+		 * POLL_NVAL is used as a signal to quit poll loop.
+		 */
+		log(LOG_CRIT, "POLL_ERR (%u) on listening socket", revents);
+	} else {
+		log(LOG_DEBUG, "Listening socket is closed");
+	}
+
+	return (-1);
+}
+
+/*
+ * IPC client sockets
+ */
+static int
+ipc_client_socket_poll_loop_set_events_cb(int fd, short *events, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (ipc_client->schedule_disconnect) {
+		qdevice_ipc_client_disconnect(instance, ipc_client);
+
+		if (pr_poll_loop_del_fd(&instance->main_poll_loop, fd) == -1) {
+			log(LOG_ERR, "pr_poll_loop_del_fd for ipc client socket failed");
+
+			return (-2);
+		}
+
+		return (-1);
+	}
+
+	if (!ipc_client->reading_line && !ipc_client->writing_buffer) {
+		return (-1);
+	}
+
+	if (ipc_client->reading_line) {
+		*events |= POLLIN;
+	}
+
+	if (ipc_client->writing_buffer) {
+		*events |= POLLOUT;
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_read_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		qdevice_ipc_io_read(instance, ipc_client);
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_write_cb(int fd, void *user_data1, void *user_data2)
+{
+	struct qdevice_instance *instance = (struct qdevice_instance *)user_data1;
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		qdevice_ipc_io_write(instance, ipc_client);
+	}
+
+	return (0);
+}
+
+static int
+ipc_client_socket_poll_loop_err_cb(int fd, short revents, void *user_data1, void *user_data2)
+{
+	struct unix_socket_client *ipc_client = (struct unix_socket_client *)user_data2;
+
+	if (!ipc_client->schedule_disconnect) {
+		log(LOG_DEBUG, "POLL_ERR (%u) on ipc client socket."
+		    " Disconnecting.", revents);
+
+		ipc_client->schedule_disconnect = 1;
+	}
+
+	return (0);
+}
+
+/*
+ * Exported functions
+ */
 int
 qdevice_ipc_init(struct qdevice_instance *instance)
 {
+
 	if (unix_socket_ipc_init(&instance->local_ipc,
 	    instance->advanced_settings->local_socket_file,
 	    instance->advanced_settings->local_socket_backlog,
@@ -50,6 +180,16 @@ qdevice_ipc_init(struct qdevice_instance *instance)
 	    instance->advanced_settings->ipc_max_receive_size,
 	    instance->advanced_settings->ipc_max_send_size) != 0) {
 		log_err(LOG_ERR, "Can't create unix socket");
+
+		return (-1);
+	}
+
+	if (pr_poll_loop_add_fd(&instance->main_poll_loop, instance->local_ipc.socket, POLLIN,
+	    ipc_socket_poll_loop_set_events_cb,
+	    ipc_socket_poll_loop_read_cb,
+	    NULL,
+	    ipc_socket_poll_loop_err_cb, instance, NULL) == -1) {
+		log(LOG_ERR, "Can't add IPC socket to main poll loop");
 
 		return (-1);
 	}
@@ -135,6 +275,19 @@ qdevice_ipc_accept(struct qdevice_instance *instance, struct unix_socket_client 
 		qdevice_ipc_client_disconnect(instance, *res_client);
 	} else {
 		memset((*res_client)->user_data, 0, sizeof(struct qdevice_ipc_user_data));
+	}
+
+	if (pr_poll_loop_add_fd(&instance->main_poll_loop, (*res_client)->socket, 0,
+	    ipc_client_socket_poll_loop_set_events_cb,
+	    ipc_client_socket_poll_loop_read_cb,
+	    ipc_client_socket_poll_loop_write_cb,
+	    ipc_client_socket_poll_loop_err_cb, instance, *res_client) == -1) {
+		log(LOG_ERR, "Can't add IPC client socket to main poll loop");
+		res = -1;
+
+		qdevice_ipc_client_disconnect(instance, *res_client);
+
+		goto return_res;
 	}
 
 return_res:

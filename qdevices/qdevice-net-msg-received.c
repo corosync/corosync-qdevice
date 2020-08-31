@@ -377,7 +377,9 @@ qdevice_net_msg_received_init_reply(struct qdevice_net_instance *instance,
 	 * Finally fully connected so it's possible to remove connection timer
 	 */
 	if (instance->connect_timer != NULL) {
-		timer_list_delete(&instance->main_timer_list, instance->connect_timer);
+		timer_list_delete(
+		    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
+		    instance->connect_timer);
 		instance->connect_timer = NULL;
 	}
 

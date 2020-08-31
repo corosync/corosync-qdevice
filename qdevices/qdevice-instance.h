@@ -123,9 +123,10 @@ struct qdevice_instance {
 	struct pr_poll_loop main_poll_loop;
 
 	/*
-	 * Set by poll handler when votequorum connection is closed
+	 * Set by poll handler when votequorum/cmap connection is closed
 	 */
 	int votequorum_closed;
+	int cmap_closed;
 	/*
 	 * Set by poll handler when one of the heuristics pipes becomes closed
 	 */

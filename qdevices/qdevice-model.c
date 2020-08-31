@@ -65,16 +65,30 @@ qdevice_model_destroy(struct qdevice_instance *instance)
 }
 
 int
-qdevice_model_run(struct qdevice_instance *instance)
+qdevice_model_pre_poll_loop(struct qdevice_instance *instance)
 {
 
 	if (instance->model_type >= QDEVICE_MODEL_TYPE_ARRAY_SIZE ||
 	    qdevice_model_array[instance->model_type] == NULL) {
-		log(LOG_CRIT, "qdevice_model_run unhandled model");
+		log(LOG_CRIT, "qdevice_model_pre_poll_loop unhandled model");
 		exit(EXIT_FAILURE);
 	}
 
-	return (qdevice_model_array[instance->model_type]->run(instance));
+	return (qdevice_model_array[instance->model_type]->pre_poll_loop(instance));
+}
+
+int
+qdevice_model_post_poll_loop(struct qdevice_instance *instance,
+    enum qdevice_model_post_poll_loop_exit_reason exit_reason)
+{
+
+	if (instance->model_type >= QDEVICE_MODEL_TYPE_ARRAY_SIZE ||
+	    qdevice_model_array[instance->model_type] == NULL) {
+		log(LOG_CRIT, "qdevice_model_post_poll_loop unhandled model");
+		exit(EXIT_FAILURE);
+	}
+
+	return (qdevice_model_array[instance->model_type]->post_poll_loop(instance, exit_reason));
 }
 
 int
@@ -83,7 +97,7 @@ qdevice_model_get_config_node_list_failed(struct qdevice_instance *instance)
 
 	if (instance->model_type >= QDEVICE_MODEL_TYPE_ARRAY_SIZE ||
 	    qdevice_model_array[instance->model_type] == NULL) {
-		log(LOG_CRIT, "qdevice_model_run unhandled model");
+		log(LOG_CRIT, "qdevice_model_get_config_node_list_failed unhandled model");
 		exit(EXIT_FAILURE);
 	}
 
@@ -97,7 +111,7 @@ qdevice_model_config_node_list_changed(struct qdevice_instance *instance,
 
 	if (instance->model_type >= QDEVICE_MODEL_TYPE_ARRAY_SIZE ||
 	    qdevice_model_array[instance->model_type] == NULL) {
-		log(LOG_CRIT, "qdevice_model_run unhandled model");
+		log(LOG_CRIT, "qdevice_model_config_node_list_changed unhandled model");
 		exit(EXIT_FAILURE);
 	}
 

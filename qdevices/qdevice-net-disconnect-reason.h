@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -121,7 +121,6 @@ enum qdevice_net_disconnect_reason {
 	QDEVICE_NET_DISCONNECT_REASON_ALGO_HEURISTICS_CHANGE_REPLY_ERR,
 
 	QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_WORKER_CLOSED,
-	QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_CANT_SEND_RECEIVE_MSG,
 };
 
 #define qdevice_net_disconnect_reason_try_reconnect(reason) (						\
@@ -142,8 +141,7 @@ enum qdevice_net_disconnect_reason {
     reason == QDEVICE_NET_DISCONNECT_REASON_CANT_SCHEDULE_VOTING_TIMER ||		\
     reason == QDEVICE_NET_DISCONNECT_REASON_CANT_REGISTER_VOTEQUORUM_CALLBACK ||	\
     reason == QDEVICE_NET_DISCONNECT_REASON_CANT_REGISTER_CMAP_CALLBACK ||		\
-    reason == QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_WORKER_CLOSED ||			\
-    reason == QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_CANT_SEND_RECEIVE_MSG)
+    reason == QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_WORKER_CLOSED)
 
 #ifdef __cplusplus
 }

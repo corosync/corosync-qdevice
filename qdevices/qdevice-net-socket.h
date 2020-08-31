@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -44,6 +44,10 @@ extern "C" {
 extern int		qdevice_net_socket_read(struct qdevice_net_instance *instance);
 
 extern int		qdevice_net_socket_write(struct qdevice_net_instance *instance);
+
+extern int		qdevice_net_socket_add_to_main_poll_loop(struct qdevice_net_instance *instance);
+
+extern int		qdevice_net_socket_del_from_main_poll_loop(struct qdevice_net_instance *instance);
 
 #ifdef __cplusplus
 }

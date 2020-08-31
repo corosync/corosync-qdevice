@@ -102,6 +102,54 @@ signal_handlers_register(void)
 	sigaction(SIGPIPE, &act, NULL);
 }
 
+static int
+qdevice_run_main_loop(struct qdevice_instance *instance)
+{
+	int res;
+	enum qdevice_model_post_poll_loop_exit_reason exit_reason;
+	int restart_loop;
+
+	log(LOG_DEBUG, "Running QDevice main loop");
+
+	restart_loop = 1;
+
+	while (restart_loop) {
+		res = qdevice_model_pre_poll_loop(instance);
+		if (res == -1) {
+			return (-1);
+		}
+
+		while ((res = pr_poll_loop_exec(&instance->main_poll_loop)) == 0) {
+		}
+
+		if (res == -2) {
+			log(LOG_CRIT, "pr_poll_loop_exec returned -2 - internal error");
+			return (-1);
+		} else if (res == -3) {
+			log_nss(LOG_CRIT, "pr_poll_loop_exec returned -3 - PR_Poll error");
+			return (-1);
+		}
+
+		exit_reason = QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_MODEL;
+		if (instance->votequorum_closed) {
+			exit_reason = QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_VOTEQUORUM_CLOSED;
+		} else if (instance->cmap_closed) {
+			exit_reason = QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_CMAP_CLOSED;
+		} else if (instance->heuristics_closed) {
+			exit_reason = QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_HEURISTICS_CLOSED;
+		} else if (qdevice_ipc_is_closed(instance)) {
+			exit_reason = QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_IPC_SOCKET_CLOSED;
+		}
+
+		res = qdevice_model_post_poll_loop(instance, exit_reason);
+		if (res == 0 || res == -1) {
+			restart_loop = 0;
+		}
+	}
+
+	return (res);
+}
+
 static void
 usage(void)
 {
@@ -187,7 +235,7 @@ main(int argc, char * const argv[])
 	int bump_log_priority;
 	int lock_file;
 	int another_instance_running;
-	int model_run_res;
+	int main_loop_res;
 
 	if (qdevice_advanced_settings_init(&advanced_settings) != 0) {
 		errx(EXIT_FAILURE, "Can't alloc memory for advanced settings");
@@ -269,19 +317,20 @@ main(int argc, char * const argv[])
 		return (EXIT_FAILURE);
 	}
 
+	global_instance = &instance;
+	signal_handlers_register();
+
 	log(LOG_DEBUG, "Waiting for initial heuristics exec result");
 	if (qdevice_pr_poll_loop_wait_for_initial_heuristics_exec_result(&instance) != 0) {
 		return (EXIT_FAILURE);
 	}
 
-	global_instance = &instance;
-	signal_handlers_register();
-
-	log(LOG_DEBUG, "Running qdevice model");
+	log(LOG_DEBUG, "Qdevice ready to provide service");
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify (0, "READY=1");
 #endif
-	model_run_res = qdevice_model_run(&instance);
+
+	main_loop_res = qdevice_run_main_loop(&instance);
 
 	log(LOG_DEBUG, "Removing cmap tracking");
 	/*
@@ -309,5 +358,5 @@ main(int argc, char * const argv[])
 
 	qdevice_advanced_settings_destroy(&advanced_settings);
 
-	return (model_run_res == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
+	return (main_loop_res == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }

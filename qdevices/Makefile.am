@@ -110,7 +110,6 @@ corosync_qdevice_SOURCES = corosync-qdevice.c \
                            pr-poll-array.c pr-poll-array.h dynar-simple-lex.c dynar-simple-lex.h \
                            dynar-str.c dynar-str.h qdevice-ipc-cmd.c qdevice-ipc-cmd.h \
                            qdevice-net-ipc-cmd.c qdevice-net-ipc-cmd.h \
-                           qdevice-net-poll.c qdevice-net-poll.h \
                            qdevice-net-send.c qdevice-net-send.h \
                            qdevice-net-votequorum.c qdevice-net-votequorum.h \
                            qdevice-net-socket.c qdevice-net-socket.h \
@@ -123,7 +122,6 @@ corosync_qdevice_SOURCES = corosync-qdevice.c \
                            qdevice-net-algo-ffsplit.c qdevice-net-algo-ffsplit.h \
                            qdevice-net-algo-2nodelms.c qdevice-net-algo-2nodelms.h \
                            qdevice-net-algo-lms.c qdevice-net-algo-lms.h \
-                           qdevice-net-poll-array-user-data.h \
                            qdevice-config.h qnet-config.h qdevice-net-disconnect-reason.h \
                            qdevice-model-type.h qdevice-advanced-settings.c \
                            qdevice-advanced-settings.h dynar-getopt-lex.c dynar-getopt-lex.h \

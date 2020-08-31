@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -39,13 +39,7 @@
 #include "qdevice-net-instance.h"
 #include "qnet-config.h"
 #include "utils.h"
-#include "qdevice-net-poll-array-user-data.h"
 #include "qdevice-ipc.h"
-
-/*
- * Needed for creating nspr handle from unix fd
- */
-#include <private/pprio.h>
 
 int
 qdevice_net_instance_init(struct qdevice_net_instance *instance,
@@ -86,44 +80,7 @@ qdevice_net_instance_init(struct qdevice_net_instance *instance,
 	send_buffer_list_init(&instance->send_buffer_list, advanced_settings->net_max_send_buffers,
 	    advanced_settings->net_initial_msg_send_size);
 
-	timer_list_init(&instance->main_timer_list);
-
-	pr_poll_array_init(&instance->poll_array, sizeof(struct qdevice_net_poll_array_user_data));
-
 	instance->tls_supported = tls_supported;
-
-	if ((instance->cmap_poll_fd = PR_CreateSocketPollFd(cmap_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR cmap poll fd");
-		return (-1);
-	}
-
-	if ((instance->votequorum_poll_fd = PR_CreateSocketPollFd(votequorum_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR votequorum poll fd");
-		return (-1);
-	}
-
-	if ((instance->ipc_socket_poll_fd = PR_CreateSocketPollFd(local_socket_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR IPC socket poll fd");
-		return (-1);
-	}
-
-	if ((instance->heuristics_pipe_cmd_send_poll_fd =
-	    PR_CreateSocketPollFd(heuristics_pipe_cmd_send_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR heuristics pipe command send poll fd");
-		return (-1);
-	}
-
-	if ((instance->heuristics_pipe_cmd_recv_poll_fd =
-	    PR_CreateSocketPollFd(heuristics_pipe_cmd_recv_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR heuristics pipe command recv poll fd");
-		return (-1);
-	}
-
-	if ((instance->heuristics_pipe_log_recv_poll_fd =
-	    PR_CreateSocketPollFd(heuristics_pipe_log_recv_fd)) == NULL) {
-		log_nss(LOG_CRIT, "Can't create NSPR heuristics pipe log recv poll fd");
-		return (-1);
-	}
 
 	return (0);
 }
@@ -152,59 +109,13 @@ qdevice_net_instance_clean(struct qdevice_net_instance *instance)
 int
 qdevice_net_instance_destroy(struct qdevice_net_instance *instance)
 {
-	struct unix_socket_client *ipc_client;
-	const struct unix_socket_client_list *ipc_client_list;
-	struct qdevice_ipc_user_data *qdevice_ipc_user_data;
-	PRFileDesc *prfd;
-
-	ipc_client_list = &instance->qdevice_instance_ptr->local_ipc.clients;
-
-	TAILQ_FOREACH(ipc_client, ipc_client_list, entries) {
-		qdevice_ipc_user_data = (struct qdevice_ipc_user_data *)ipc_client->user_data;
-		prfd = (PRFileDesc *)qdevice_ipc_user_data->model_data;
-
-		if (PR_DestroySocketPollFd(prfd) != PR_SUCCESS) {
-			log_nss(LOG_WARNING, "Unable to destroy client IPC poll socket fd");
-		}
-	}
 
 	dynar_destroy(&instance->receive_buffer);
 
 	send_buffer_list_free(&instance->send_buffer_list);
 
-	pr_poll_array_destroy(&instance->poll_array);
-
-	timer_list_free(&instance->main_timer_list);
-
 	free((void *)instance->cluster_name);
 	free((void *)instance->host_addr);
-
-	if (PR_DestroySocketPollFd(instance->votequorum_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close votequorum connection fd");
-	}
-
-	if (PR_DestroySocketPollFd(instance->cmap_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close votequorum connection fd");
-	}
-
-	if (PR_DestroySocketPollFd(instance->ipc_socket_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close local socket poll fd");
-	}
-
-	if (PR_DestroySocketPollFd(instance->heuristics_pipe_cmd_send_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close heuristics pipe command send poll fd");
-		return (-1);
-	}
-
-	if (PR_DestroySocketPollFd(instance->heuristics_pipe_cmd_recv_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close heuristics pipe command recv poll fd");
-		return (-1);
-	}
-
-	if (PR_DestroySocketPollFd(instance->heuristics_pipe_log_recv_poll_fd) != PR_SUCCESS) {
-		log_nss(LOG_WARNING, "Unable to close heuristics pipe log recv poll fd");
-		return (-1);
-	}
 
 	return (0);
 }

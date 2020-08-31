@@ -42,6 +42,150 @@
 #include "qdevice-net-socket.h"
 
 /*
+ * Socket callbacks
+ */
+static int
+socket_set_events_cb(PRFileDesc *prfd, short *events, void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	if (!send_buffer_list_empty(&instance->send_buffer_list)) {
+		*events |= POLLOUT;
+	}
+
+	return (0);
+}
+
+static int
+socket_read_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	if (qdevice_net_socket_read(instance) == -1) {
+		instance->schedule_disconnect = 1;
+
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+socket_write_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	if (qdevice_net_socket_write(instance) == -1) {
+		instance->schedule_disconnect = 1;
+
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+non_blocking_client_socket_write_cb(PRFileDesc *prfd, const PRPollDesc *pd, void *user_data1,
+    void *user_data2)
+{
+	int res;
+
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	res = nss_sock_non_blocking_client_succeeded(pd);
+	if (res == -1) {
+		/*
+		 * Connect failed -> remove this fd from main loop and try next
+		 */
+		res = qdevice_net_socket_del_from_main_poll_loop(instance);
+		if (res == -1) {
+			return (-1);
+		}
+
+		res = nss_sock_non_blocking_client_try_next(&instance->non_blocking_client);
+		if (res == -1) {
+			log_nss(LOG_ERR, "Can't connect to qnetd host.");
+			nss_sock_non_blocking_client_destroy(&instance->non_blocking_client);
+		}
+
+		res = qdevice_net_socket_add_to_main_poll_loop(instance);
+		if (res == -1) {
+			return (-1);
+		}
+	} else if (res == 0) {
+		/*
+		 * Poll again
+		 */
+	} else if (res == 1) {
+		/*
+		 * Connect success -> delete socket from main loop and add final one
+		 */
+		res = qdevice_net_socket_del_from_main_poll_loop(instance);
+		if (res == -1) {
+			return (-1);
+		}
+
+		instance->socket = instance->non_blocking_client.socket;
+		nss_sock_non_blocking_client_destroy(&instance->non_blocking_client);
+		instance->non_blocking_client.socket = NULL;
+
+		instance->state = QDEVICE_NET_INSTANCE_STATE_SENDING_PREINIT_REPLY;
+
+		res = qdevice_net_socket_add_to_main_poll_loop(instance);
+		if (res == -1) {
+			return (-1);
+		}
+
+		log(LOG_DEBUG, "Sending preinit msg to qnetd");
+		if (qdevice_net_send_preinit(instance) != 0) {
+			instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_ALLOCATE_MSG_BUFFER;
+			return (-1);
+		}
+	} else {
+		log(LOG_CRIT, "Unhandled nss_sock_non_blocking_client_succeeded");
+		exit(EXIT_FAILURE);
+	}
+
+	return (0);
+}
+
+static int
+socket_err_cb(PRFileDesc *prfd, short revents, const PRPollDesc *pd, void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	log(LOG_ERR, "POLL_ERR (%u) on main socket", revents);
+
+	instance->schedule_disconnect = 1;
+	instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_SERVER_CLOSED_CONNECTION;
+
+	return (-1);
+}
+
+static int
+non_blocking_client_socket_err_cb(PRFileDesc *prfd, short revents, const PRPollDesc *pd,
+    void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	/*
+	 * Workaround for RHEL<7. Pollout is never set for nonblocking connect (doesn't work
+	 * only with poll, select works as expected!???).
+	 * So test if client is still valid and if pollout was not already called (ensured
+	 * by default because of order in PR_Poll).
+	 * If both applies it's possible to emulate pollout set by calling poll_write.
+	 */
+	if (!instance->non_blocking_client.destroyed) {
+		return (non_blocking_client_socket_write_cb(prfd, pd, user_data1, user_data2));
+	}
+
+	return (0);
+}
+/*
+ * Exported functions
+ */
+
+/*
  * -1 means end of connection (EOF) or some other unhandled error. 0 = success
  */
 int
@@ -207,6 +351,66 @@ qdevice_net_socket_write(struct qdevice_net_instance *instance)
 		instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_SEND_MESSAGE;
 
 		return (-1);
+	}
+
+	return (0);
+}
+
+int
+qdevice_net_socket_add_to_main_poll_loop(struct qdevice_net_instance *instance)
+{
+
+	if (instance->state != QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT ||
+	    !instance->non_blocking_client.destroyed) {
+		if (instance->state == QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT) {
+			if (pr_poll_loop_add_prfd(&instance->qdevice_instance_ptr->main_poll_loop,
+			    instance->non_blocking_client.socket,
+			    POLLOUT|POLLPRI,
+			    NULL, NULL, non_blocking_client_socket_write_cb,
+			    non_blocking_client_socket_err_cb,
+			    instance, NULL) != 0) {
+				log(LOG_ERR, "Can't add net socket (non_blocking_client) "
+				    "fd to main poll loop");
+
+				return (-1);
+			}
+		} else {
+			if (pr_poll_loop_add_prfd(&instance->qdevice_instance_ptr->main_poll_loop,
+			    instance->socket,
+			    POLLIN,
+			    socket_set_events_cb, socket_read_cb, socket_write_cb, socket_err_cb,
+			    instance, NULL) != 0) {
+				log(LOG_ERR, "Can't add net socket fd to main poll loop");
+
+				return (-1);
+			}
+		}
+	}
+
+	return (0);
+}
+
+int
+qdevice_net_socket_del_from_main_poll_loop(struct qdevice_net_instance *instance)
+{
+
+	if (!instance->non_blocking_client.destroyed) {
+		if (pr_poll_loop_del_prfd(&instance->qdevice_instance_ptr->main_poll_loop,
+		    instance->non_blocking_client.socket) != 0) {
+			log(LOG_ERR, "Can't remove net socket (non_blocking_client) "
+			    "fd from main poll loop");
+
+			return (-1);
+		}
+	}
+
+	if (instance->socket != NULL) {
+		if (pr_poll_loop_del_prfd(&instance->qdevice_instance_ptr->main_poll_loop,
+		    instance->socket) != 0) {
+			log(LOG_ERR, "Can't remove net socket fd from main poll loop");
+
+			return (-1);
+		}
 	}
 
 	return (0);

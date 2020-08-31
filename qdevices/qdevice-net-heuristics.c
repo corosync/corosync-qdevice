@@ -350,7 +350,8 @@ qdevice_net_heuristics_stop_timer(struct qdevice_net_instance *net_instance)
 	if (net_instance->regular_heuristics_timer != NULL) {
 		log(LOG_DEBUG, "Regular heuristics timer stopped");
 
-		timer_list_delete(&net_instance->main_timer_list, net_instance->regular_heuristics_timer);
+		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		    net_instance->regular_heuristics_timer);
 		net_instance->regular_heuristics_timer = NULL;
 
 		if (qdevice_heuristics_result_notifier_list_set_active(&heuristics_instance->exec_result_notifier_list,
@@ -397,7 +398,8 @@ qdevice_net_heuristics_schedule_timer(struct qdevice_net_instance *net_instance)
 
 	log(LOG_DEBUG, "Scheduling next regular heuristics in %"PRIu32"ms", interval);
 
-	net_instance->regular_heuristics_timer = timer_list_add(&net_instance->main_timer_list,
+	net_instance->regular_heuristics_timer = timer_list_add(
+		pr_poll_loop_get_timer_list(&instance->main_poll_loop),
 		interval,
 		qdevice_net_heuristics_timer_callback,
 	        (void *)net_instance, NULL);

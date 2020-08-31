@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -42,12 +42,47 @@
 #include "qdevice-net-ipc-cmd.h"
 #include "qdevice-net-algorithm.h"
 #include "qdevice-net-heuristics.h"
-#include "qdevice-net-poll.h"
 #include "qdevice-net-send.h"
+#include "qdevice-net-socket.h"
 #include "qdevice-net-votequorum.h"
 #include "qnet-config.h"
 #include "nss-sock.h"
 
+/*
+ * Callbacks
+ */
+static int
+check_schedule_disconnect_cb(void *user_data1, void *user_data2)
+{
+	struct qdevice_net_instance *instance = (struct qdevice_net_instance *)user_data1;
+
+	if (instance->schedule_disconnect) {
+		return (-1);
+	}
+
+	return (0);
+}
+
+static int
+qdevice_model_net_timer_connect_timeout(void *data1, void *data2)
+{
+	struct qdevice_net_instance *instance;
+
+	instance = (struct qdevice_net_instance *)data1;
+
+	log(LOG_ERR, "Connect timeout");
+
+	instance->schedule_disconnect = 1;
+
+	instance->connect_timer = NULL;
+	instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_CONNECT_TO_THE_SERVER;
+
+	return (0);
+}
+
+/*
+ * Exported functions
+ */
 int
 qdevice_model_net_init(struct qdevice_instance *instance)
 {
@@ -120,22 +155,6 @@ qdevice_model_net_destroy(struct qdevice_instance *instance)
 	return (0);
 }
 
-static int
-qdevice_model_net_timer_connect_timeout(void *data1, void *data2)
-{
-	struct qdevice_net_instance *instance;
-
-	instance = (struct qdevice_net_instance *)data1;
-
-	log(LOG_ERR, "Connect timeout");
-
-	instance->schedule_disconnect = 1;
-
-	instance->connect_timer = NULL;
-	instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_CONNECT_TO_THE_SERVER;
-
-	return (0);
-}
 
 static PRIntn
 qdevice_model_net_get_af(const struct qdevice_net_instance *instance)
@@ -154,134 +173,213 @@ qdevice_model_net_get_af(const struct qdevice_net_instance *instance)
 	return (af);
 }
 
+/*
+ *  0 - Continue
+ * -1 - End loop
+ */
 int
-qdevice_model_net_run(struct qdevice_instance *instance)
+qdevice_model_net_pre_poll_loop(struct qdevice_instance *instance)
 {
 	struct qdevice_net_instance *net_instance;
-	int try_connect;
 	int res;
-	enum tlv_vote vote;
-	int delay_before_reconnect;
-	int ret_val;
 
 	net_instance = instance->model_data;
 
-	log(LOG_DEBUG, "Executing qdevice-net");
+	net_instance->state = QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT;
+	net_instance->socket = NULL;
 
+	net_instance->connect_timer = timer_list_add(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		net_instance->connect_timeout, qdevice_model_net_timer_connect_timeout,
+		(void *)net_instance, NULL);
+
+	if (net_instance->connect_timer == NULL) {
+		log(LOG_CRIT, "Can't schedule connect timer");
+
+		return (-1);
+	}
+
+	log(LOG_DEBUG, "Trying connect to qnetd server %s:%u (timeout = %ums)",
+	    net_instance->host_addr, net_instance->host_port, net_instance->connect_timeout);
+
+	res = nss_sock_non_blocking_client_init(net_instance->host_addr,
+	    net_instance->host_port, qdevice_model_net_get_af(net_instance),
+	    &net_instance->non_blocking_client);
+	if (res == -1) {
+		log_nss(LOG_ERR, "Can't initialize non blocking client connection");
+	}
+
+	res = nss_sock_non_blocking_client_try_next(&net_instance->non_blocking_client);
+	if (res == -1) {
+		log_nss(LOG_ERR, "Can't connect to qnetd host");
+	}
+
+	res = qdevice_net_socket_add_to_main_poll_loop(net_instance);
+	if (res == -1) {
+		goto error_free_non_blocking_client;
+	}
+
+	res = pr_poll_loop_add_pre_poll_cb(&instance->main_poll_loop, check_schedule_disconnect_cb,
+	    net_instance, NULL);
+	if (res == -1) {
+		log(LOG_CRIT, "Can't add pre poll callback to main loop");
+		goto error_del_from_main_poll_loop;
+	}
+
+	return (0);
+
+error_del_from_main_poll_loop:
+	(void)qdevice_net_socket_del_from_main_poll_loop(net_instance);
+
+error_free_non_blocking_client:
+	nss_sock_non_blocking_client_destroy(&net_instance->non_blocking_client);
+	return (-1);
+}
+
+/*
+ *  1 - Restart loop
+ *  0 - End loop with no error
+ * -1 - End loop with error -1
+ */
+int
+qdevice_model_net_post_poll_loop(struct qdevice_instance *instance,
+    enum qdevice_model_post_poll_loop_exit_reason exit_reason)
+{
+	struct qdevice_net_instance *net_instance;
+	int restart_loop;
+	int ret_val;
+	enum tlv_vote vote;
+	int delay_before_reconnect;
+
+	net_instance = instance->model_data;
+
+	restart_loop = 1;
 	ret_val = -1;
 
-	try_connect = 1;
-	while (try_connect) {
-		net_instance->state = QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT;
+	if (net_instance->connect_timer != NULL) {
+		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		    net_instance->connect_timer);
+		net_instance->connect_timer = NULL;
+	}
+
+	if (net_instance->echo_request_timer != NULL) {
+		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		    net_instance->echo_request_timer);
+		net_instance->echo_request_timer = NULL;
+	}
+
+	/*
+	 * Map qdevice exit_reason to qdevice-net disconnect reason
+	 */
+	switch (exit_reason) {
+	case QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_MODEL:
+		/*
+		 * Disconnect reason should be already set
+		 */
+		break;
+	case QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_VOTEQUORUM_CLOSED:
+		net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_COROSYNC_CONNECTION_CLOSED;
+		break;
+	case QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_CMAP_CLOSED:
+		net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_COROSYNC_CONNECTION_CLOSED;
+		break;
+	case QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_HEURISTICS_CLOSED:
+		net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_HEURISTICS_WORKER_CLOSED;
+		break;
+	case QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_IPC_SOCKET_CLOSED:
+		net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_LOCAL_SOCKET_CLOSED;
+		break;
+	/*
+	 * Default not handled intentionally. Compiler shows warning when new exit reason is added
+	 */
+	}
+
+	restart_loop = qdevice_net_disconnect_reason_try_reconnect(net_instance->disconnect_reason);
+
+	/*
+	 * Unpause cast vote timer, because if it is paused we cannot remove tracking
+	 */
+	qdevice_net_cast_vote_timer_set_paused(net_instance, 0);
+
+	vote = TLV_VOTE_NO_CHANGE;
+
+	if (qdevice_net_algorithm_disconnected(net_instance,
+	    net_instance->disconnect_reason, &restart_loop, &vote) != 0) {
+		log(LOG_ERR, "Algorithm returned error, force exit");
+		return (-1);
+	} else {
+		log(LOG_DEBUG, "Algorithm result vote is %s",
+		    tlv_vote_to_str(vote));
+	}
+
+	if (qdevice_net_cast_vote_timer_update(net_instance, vote) != 0) {
+		log(LOG_ERR, "qdevice_model_net_run fatal error. "
+		    " Can't update cast vote timer vote");
+	}
+
+	if (qdevice_net_disconnect_reason_force_disconnect(net_instance->disconnect_reason)) {
+		restart_loop = 0;
+	}
+
+	/*
+	 * Return 0 only when local socket was closed -> regular exit
+	 */
+	if (net_instance->disconnect_reason == QDEVICE_NET_DISCONNECT_REASON_LOCAL_SOCKET_CLOSED) {
+		ret_val = 0;
+	}
+
+	/*
+	 * Remove pre poll cb
+	 */
+	if (pr_poll_loop_del_pre_poll_cb(&instance->main_poll_loop, check_schedule_disconnect_cb) == -1) {
+		log(LOG_ERR, "Can't delete pre poll callback from main loop");
+		restart_loop = 0;
+		ret_val = -1;
+	}
+
+	/*
+	 * Remove socket from loop
+	 */
+	if (qdevice_net_socket_del_from_main_poll_loop(net_instance) == -1) {
+		restart_loop = 0;
+		ret_val = -1;
+	}
+
+	if (net_instance->socket != NULL) {
+		if (PR_Close(net_instance->socket) != PR_SUCCESS) {
+			log_nss(LOG_WARNING, "Unable to close connection");
+		}
 		net_instance->socket = NULL;
+	}
 
-		net_instance->connect_timer = timer_list_add(&net_instance->main_timer_list,
-			net_instance->connect_timeout, qdevice_model_net_timer_connect_timeout,
-			(void *)net_instance, NULL);
+	if (!net_instance->non_blocking_client.destroyed) {
+		nss_sock_non_blocking_client_destroy(&net_instance->non_blocking_client);
+	}
 
-		if (net_instance->connect_timer == NULL) {
-			log(LOG_CRIT, "Can't schedule connect timer");
-
-			try_connect = 0;
-			break;
+	if (net_instance->non_blocking_client.socket != NULL) {
+		if (PR_Close(net_instance->non_blocking_client.socket) != PR_SUCCESS) {
+			log_nss(LOG_WARNING, "Unable to close non-blocking client connection");
 		}
+		net_instance->non_blocking_client.socket = NULL;
+	}
 
-		log(LOG_DEBUG, "Trying connect to qnetd server %s:%u (timeout = %ums)",
-		    net_instance->host_addr, net_instance->host_port, net_instance->connect_timeout);
-
-		res = nss_sock_non_blocking_client_init(net_instance->host_addr,
-		    net_instance->host_port, qdevice_model_net_get_af(net_instance),
-		    &net_instance->non_blocking_client);
-		if (res == -1) {
-			log_nss(LOG_ERR, "Can't initialize non blocking client connection");
-		}
-
-		res = nss_sock_non_blocking_client_try_next(&net_instance->non_blocking_client);
-		if (res == -1) {
-			log_nss(LOG_ERR, "Can't connect to qnetd host");
-			nss_sock_non_blocking_client_destroy(&net_instance->non_blocking_client);
-		}
-
-		while (qdevice_net_poll(net_instance) == 0) {
-		};
-
-		if (net_instance->connect_timer != NULL) {
-			timer_list_delete(&net_instance->main_timer_list, net_instance->connect_timer);
-			net_instance->connect_timer = NULL;
-		}
-
-		if (net_instance->echo_request_timer != NULL) {
-			timer_list_delete(&net_instance->main_timer_list, net_instance->echo_request_timer);
-			net_instance->echo_request_timer = NULL;
-		}
-
-		try_connect = qdevice_net_disconnect_reason_try_reconnect(net_instance->disconnect_reason);
-
+	if (restart_loop &&
+	    net_instance->state != QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT) {
 		/*
-		 * Unpause cast vote timer, because if it is paused we cannot remove tracking
+		 * Give qnetd server a little time before reconnect
 		 */
-		qdevice_net_cast_vote_timer_set_paused(net_instance, 0);
+		delay_before_reconnect = random() %
+		    (int)(net_instance->cast_vote_timer_interval * 0.9);
 
-		vote = TLV_VOTE_NO_CHANGE;
-
-		if (qdevice_net_algorithm_disconnected(net_instance,
-		    net_instance->disconnect_reason, &try_connect, &vote) != 0) {
-			log(LOG_ERR, "Algorithm returned error, force exit");
-			return (-1);
-		} else {
-			log(LOG_DEBUG, "Algorithm result vote is %s",
-			    tlv_vote_to_str(vote));
-		}
-
-		if (qdevice_net_cast_vote_timer_update(net_instance, vote) != 0) {
-			log(LOG_ERR, "qdevice_model_net_run fatal error. "
-			    " Can't update cast vote timer vote");
-		}
-
-		if (qdevice_net_disconnect_reason_force_disconnect(net_instance->disconnect_reason)) {
-			try_connect = 0;
-		}
-
-		/*
-		 * Return 0 only when local socket was closed -> regular exit
-		 */
-		if (net_instance->disconnect_reason == QDEVICE_NET_DISCONNECT_REASON_LOCAL_SOCKET_CLOSED) {
-			ret_val = 0;
-		}
-
-		if (net_instance->socket != NULL) {
-			if (PR_Close(net_instance->socket) != PR_SUCCESS) {
-				log_nss(LOG_WARNING, "Unable to close connection");
-			}
-			net_instance->socket = NULL;
-		}
-
-		if (!net_instance->non_blocking_client.destroyed) {
-			nss_sock_non_blocking_client_destroy(&net_instance->non_blocking_client);
-		}
-
-		if (net_instance->non_blocking_client.socket != NULL) {
-			if (PR_Close(net_instance->non_blocking_client.socket) != PR_SUCCESS) {
-				log_nss(LOG_WARNING, "Unable to close non-blocking client connection");
-			}
-			net_instance->non_blocking_client.socket = NULL;
-		}
-
-		if (try_connect &&
-		    net_instance->state != QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT) {
-			/*
-			 * Give qnetd server a little time before reconnect
-			 */
-			delay_before_reconnect = random() %
-			    (int)(net_instance->cast_vote_timer_interval * 0.9);
-
-			log(LOG_DEBUG, "Sleeping for %u ms before reconnect",
-			    delay_before_reconnect);
-			(void)poll(NULL, 0, delay_before_reconnect);
-		}
+		log(LOG_DEBUG, "Sleeping for %u ms before reconnect",
+		    delay_before_reconnect);
+		(void)poll(NULL, 0, delay_before_reconnect);
+	}
 
 
-		qdevice_net_instance_clean(net_instance);
+	qdevice_net_instance_clean(net_instance);
+
+	if (restart_loop) {
+		return (1);
 	}
 
 	return (ret_val);
@@ -679,7 +777,8 @@ static struct qdevice_model qdevice_model_net = {
 	.name					= "net",
 	.init					= qdevice_model_net_init,
 	.destroy				= qdevice_model_net_destroy,
-	.run					= qdevice_model_net_run,
+	.pre_poll_loop				= qdevice_model_net_pre_poll_loop,
+	.post_poll_loop				= qdevice_model_net_post_poll_loop,
 	.get_config_node_list_failed		= qdevice_model_net_get_config_node_list_failed,
 	.config_node_list_changed		= qdevice_model_net_config_node_list_changed,
 	.votequorum_quorum_notify		= qdevice_model_net_votequorum_quorum_notify,
@@ -693,5 +792,6 @@ static struct qdevice_model qdevice_model_net = {
 int
 qdevice_model_net_register(void)
 {
+
 	return (qdevice_model_register(QDEVICE_MODEL_TYPE_NET, &qdevice_model_net));
 }

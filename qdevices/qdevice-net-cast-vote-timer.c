@@ -136,7 +136,8 @@ qdevice_net_cast_vote_timer_update(struct qdevice_net_instance *instance, enum t
 
 	if (timer_needs_running) {
 		if (instance->cast_vote_timer == NULL) {
-			instance->cast_vote_timer = timer_list_add(&instance->main_timer_list,
+			instance->cast_vote_timer = timer_list_add(
+			    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
 			    instance->cast_vote_timer_interval,
 			    qdevice_net_cast_vote_timer_callback, (void *)instance, NULL);
 
@@ -161,7 +162,9 @@ qdevice_net_cast_vote_timer_update(struct qdevice_net_instance *instance, enum t
 		}
 	} else {
 		if (instance->cast_vote_timer != NULL) {
-			timer_list_delete(&instance->main_timer_list, instance->cast_vote_timer);
+			timer_list_delete(
+			    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
+			    instance->cast_vote_timer);
 			instance->cast_vote_timer = NULL;
 			log(LOG_DEBUG, "Cast vote timer is now stopped.");
 		} else {

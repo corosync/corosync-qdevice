@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -44,11 +44,33 @@
 extern "C" {
 #endif
 
+enum qdevice_model_post_poll_loop_exit_reason {
+	/* Some of model callbacks made poll loop exit */
+	QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_MODEL,
+	/* Votequorum connection closed */
+	QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_VOTEQUORUM_CLOSED,
+	/* Cmap connection closed */
+	QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_CMAP_CLOSED,
+	/* One of heuristics pipes closed */
+	QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_HEURISTICS_CLOSED,
+	/* IPC socket closed (user initiated shutdown) */
+	QDEVICE_MODEL_POST_POLL_LOOP_EXIT_REASON_IPC_SOCKET_CLOSED
+};
+
 extern int	qdevice_model_init(struct qdevice_instance *instance);
 
 extern int	qdevice_model_destroy(struct qdevice_instance *instance);
 
-extern int	qdevice_model_run(struct qdevice_instance *instance);
+/*
+ *  Return codes: 0 - Continue, -1 - End loop
+ */
+extern int	qdevice_model_pre_poll_loop(struct qdevice_instance *instance);
+
+/*
+ * Return codes:  1 - Restart loop, 0 - End loop with no error, -1 - End loop with error -1
+ */
+extern int	qdevice_model_post_poll_loop(struct qdevice_instance *instance,
+    enum qdevice_model_post_poll_loop_exit_reason exit_reason);
 
 extern int	qdevice_model_get_config_node_list_failed(struct qdevice_instance *instance);
 
@@ -78,7 +100,9 @@ struct qdevice_model {
 	const char *name;
 	int (*init)(struct qdevice_instance *instance);
 	int (*destroy)(struct qdevice_instance *instance);
-	int (*run)(struct qdevice_instance *instance);
+	int (*pre_poll_loop)(struct qdevice_instance *instance);
+	int (*post_poll_loop)(struct qdevice_instance *instance,
+	    enum qdevice_model_post_poll_loop_exit_reason exit_reason);
 	int (*get_config_node_list_failed)(struct qdevice_instance *instance);
 	int (*config_node_list_changed)(struct qdevice_instance *instance,
 	    const struct node_list *nlist, int config_version_set, uint64_t config_version);

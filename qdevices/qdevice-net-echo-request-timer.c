@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -85,12 +85,15 @@ qdevice_net_echo_request_timer_schedule(struct qdevice_net_instance *instance)
 	instance->echo_reply_received_msg_seq_num = 0;
 
 	if (instance->echo_request_timer != NULL) {
-		timer_list_delete(&instance->main_timer_list, instance->echo_request_timer);
+		timer_list_delete(
+		    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
+		    instance->echo_request_timer);
 		instance->echo_request_timer = NULL;
 	}
 
 	log(LOG_DEBUG, "Scheduling send of heartbeat every %"PRIu32"ms", instance->heartbeat_interval);
-	instance->echo_request_timer = timer_list_add(&instance->main_timer_list,
+	instance->echo_request_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
 	    instance->heartbeat_interval, qdevice_net_echo_request_timer_callback,
 	    (void *)instance, NULL);
 

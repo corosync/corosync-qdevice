@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -46,7 +46,6 @@
 
 #include "dynar.h"
 #include "node-list.h"
-#include "pr-poll-array.h"
 #include "qdevice-net-disconnect-reason.h"
 #include "send-buffer-list.h"
 #include "tlv.h"
@@ -89,12 +88,8 @@ struct qdevice_net_instance {
 	uint16_t host_port;
 	const char *cluster_name;
 	enum tlv_decision_algorithm_type decision_algorithm;
-	struct timer_list main_timer_list;
 	struct timer_list_entry *echo_request_timer;
 	int schedule_disconnect;
-	PRFileDesc *votequorum_poll_fd;
-	PRFileDesc *cmap_poll_fd;
-	PRFileDesc *ipc_socket_poll_fd;
 	struct tlv_ring_id last_sent_ring_id;
 	struct tlv_tie_breaker tie_breaker;
 	void *algorithm_data;
@@ -103,13 +98,9 @@ struct qdevice_net_instance {
 	struct nss_sock_non_blocking_client non_blocking_client;
 	struct timer_list_entry *connect_timer;
 	int force_ip_version;
-	struct pr_poll_array poll_array;
 	time_t last_echo_reply_received_time;
 	time_t connected_since_time;
 	const struct qdevice_advanced_settings *advanced_settings;
-	PRFileDesc *heuristics_pipe_cmd_send_poll_fd;
-	PRFileDesc *heuristics_pipe_cmd_recv_poll_fd;
-	PRFileDesc *heuristics_pipe_log_recv_poll_fd;
 	struct timer_list_entry *regular_heuristics_timer;
 	int server_supports_heuristics;
 	enum tlv_heuristics latest_regular_heuristics_result;

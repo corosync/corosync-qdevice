@@ -42,7 +42,6 @@ extern "C" {
 #endif
 
 struct qdevice_ipc_user_data {
-	void *model_data;
 	int shutdown_requested;
 };
 

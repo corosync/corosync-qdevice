@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -46,7 +46,10 @@ extern int	qdevice_model_net_init(struct qdevice_instance *instance);
 
 extern int	qdevice_model_net_destroy(struct qdevice_instance *instance);
 
-extern int	qdevice_model_net_run(struct qdevice_instance *instance);
+extern int	qdevice_model_net_pre_poll_loop(struct qdevice_instance *instance);
+
+extern int	qdevice_model_net_post_poll_loop(struct qdevice_instance *instance,
+    enum qdevice_model_post_poll_loop_exit_reason exit_reason);
 
 extern int	qdevice_model_net_get_config_node_list_failed(struct qdevice_instance *instance);
 
