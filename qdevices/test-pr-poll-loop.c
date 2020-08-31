@@ -524,6 +524,22 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
+	 * Remove entry and try with zero events and -2 return callback
+	 */
+	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
+	assert(pr_poll_loop_add_fd(poll_loop, pipe_fd1[0], 0, fd_set_events_cb1_return,
+	    NULL, NULL, NULL, (void *)&fd_set_events_cb1_return_called, NULL) == 0);
+
+	fd_set_events_cb1_return_called = 0;
+
+	assert((timeout_timer = timer_list_add(
+	    pr_poll_loop_get_timer_list(poll_loop), TIMER_TIMEOUT, timeout_cb, NULL, NULL)) != NULL);
+	assert(pr_poll_loop_exec(poll_loop) == -1);
+
+	assert(fd_set_events_cb1_return_called == 1);
+	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+
+	/*
 	 * Remove entry and try different cb
 	 */
 	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);

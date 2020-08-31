@@ -338,7 +338,7 @@ int prepare_poll_array(struct pr_poll_loop *poll_loop)
 			return (-2);
 		}
 
-		if (events == 0) {
+		if (res == 0 && events == 0) {
 			/*
 			 * Empty events -> do not add entry
 			 */
