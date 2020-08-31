@@ -169,7 +169,7 @@ qnetd_run_main_loop(struct qnetd_instance *instance)
 		return (-1);
 	}
 
-	return (poll_res);
+	return (qnetd_ipc_is_closed(instance) ? 0 : -1);
 }
 
 static void
