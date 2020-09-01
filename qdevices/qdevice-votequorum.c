@@ -269,7 +269,7 @@ qdevice_votequorum_destroy(struct qdevice_instance *instance)
 
 	res = votequorum_trackstop(instance->votequorum_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't start tracking votequorum changes. Error %s",
+		log(LOG_WARNING, "Can't stop tracking votequorum changes. Error %s",
 		    cs_strerror(res));
 	}
 
