@@ -17,8 +17,8 @@ between server and client is designed to be very simple and allow
 backwards compatibility.
 
 Originally both qdevice and qnetd were part of the Corosync codebase
-(https://github.com/corosync/corosync) but because it's got quite big we
-decided to split it into it's own sub project.
+(https://github.com/corosync/corosync) but because it got quite big we
+decided to split it into its own sub-project.
 
 Dependencies
 ------------
