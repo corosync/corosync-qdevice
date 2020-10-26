@@ -278,7 +278,7 @@ qdevice_net_connect_heuristics_exec_result_callback(uint32_t seq_number,
 	}
 
 	if (qdevice_net_cast_vote_timer_update(net_instance, vote) != 0) {
-		log(LOG_CRIT, "qdevice_net_msg_received_set_option_reply fatal error. "
+		log(LOG_CRIT, "qdevice_net_connect_heuristics_exec_result_callback fatal error. "
 		    " Can't update cast vote timer vote");
 		net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_SCHEDULE_VOTING_TIMER;
 	}
