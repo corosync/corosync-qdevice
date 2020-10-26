@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -149,7 +149,8 @@ extern size_t		msg_create_set_option(struct dynar *msg,
     int add_heartbeat_interval, uint32_t heartbeat_interval);
 
 extern size_t		msg_create_set_option_reply(struct dynar *msg,
-    int add_msg_seq_number, uint32_t msg_seq_number, uint32_t heartbeat_interval);
+    int add_msg_seq_number, uint32_t msg_seq_number,
+    int add_heartbeat_interval, uint32_t heartbeat_interval);
 
 extern size_t		msg_create_echo_request(struct dynar *msg, int add_msg_seq_number,
     uint32_t msg_seq_number);

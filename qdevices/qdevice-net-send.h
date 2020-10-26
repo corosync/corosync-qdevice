@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -65,6 +65,9 @@ extern int		qdevice_net_send_membership_node_list(
 extern int		qdevice_net_send_quorum_node_list(
     struct qdevice_net_instance *instance, enum tlv_quorate quorate,
     uint32_t node_list_entries, votequorum_node_t node_list[]);
+
+extern int		qdevice_net_send_set_option(struct qdevice_net_instance *instance,
+    int add_heartbeat_interval, uint32_t heartbeat_interval);
 
 #ifdef __cplusplus
 }

@@ -580,7 +580,7 @@ qnetd_client_msg_received_set_option(struct qnetd_instance *instance, struct qne
 	}
 
 	if (msg_create_set_option_reply(&send_buffer->buffer, msg->seq_number_set, msg->seq_number,
-	    client->heartbeat_interval) == 0) {
+	    msg->heartbeat_interval_set, client->heartbeat_interval) == 0) {
 		log(LOG_ERR, "Can't alloc set option reply msg. "
 		    "Disconnecting client connection.");
 

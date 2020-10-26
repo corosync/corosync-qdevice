@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -450,7 +450,7 @@ small_buf_err:
 
 size_t
 msg_create_set_option_reply(struct dynar *msg, int add_msg_seq_number, uint32_t msg_seq_number,
-    uint32_t heartbeat_interval)
+    int add_heartbeat_interval, uint32_t heartbeat_interval)
 {
 
 	dynar_clean(msg);
@@ -464,8 +464,10 @@ msg_create_set_option_reply(struct dynar *msg, int add_msg_seq_number, uint32_t 
 		}
 	}
 
-	if (tlv_add_heartbeat_interval(msg, heartbeat_interval) == -1) {
-		goto small_buf_err;
+	if (add_heartbeat_interval) {
+		if (tlv_add_heartbeat_interval(msg, heartbeat_interval) == -1) {
+			goto small_buf_err;
+		}
 	}
 
 	msg_set_len(msg, dynar_size(msg) - (MSG_TYPE_LENGTH + MSG_LENGTH_LENGTH));

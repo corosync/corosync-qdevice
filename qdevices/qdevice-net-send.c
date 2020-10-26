@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -347,6 +347,38 @@ qdevice_net_send_quorum_node_list(struct qdevice_net_instance *instance,
 	}
 
 	node_list_free(&nlist);
+
+	send_buffer_list_put(&instance->send_buffer_list, send_buffer);
+
+	return (0);
+}
+
+int
+qdevice_net_send_set_option(struct qdevice_net_instance *instance,
+    int add_heartbeat_interval, uint32_t heartbeat_interval)
+{
+	struct send_buffer_list_entry *send_buffer;
+
+	send_buffer = send_buffer_list_get_new(&instance->send_buffer_list);
+	if (send_buffer == NULL) {
+		log(LOG_ERR, "Can't allocate send list buffer for ask for vote msg");
+
+		return (-1);
+	}
+
+	instance->last_msg_seq_num++;
+
+	log(LOG_DEBUG, "Sending set option seq = "UTILS_PRI_MSG_SEQ ", "
+	    "hb(%u) = %" PRIu32,
+	    instance->last_msg_seq_num, add_heartbeat_interval, heartbeat_interval);
+
+	if (msg_create_set_option(&send_buffer->buffer, 1, instance->last_msg_seq_num,
+	    add_heartbeat_interval, heartbeat_interval) == 0) {
+		log(LOG_ERR, "Can't allocate send buffer for set option msg");
+
+		send_buffer_list_discard_new(&instance->send_buffer_list, send_buffer);
+		return (-1);
+	}
 
 	send_buffer_list_put(&instance->send_buffer_list, send_buffer);
 

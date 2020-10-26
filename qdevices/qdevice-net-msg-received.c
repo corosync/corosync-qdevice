@@ -451,14 +451,10 @@ qdevice_net_msg_received_set_option_reply(struct qdevice_net_instance *instance,
 		return (-1);
 	}
 
-	if (qdevice_net_msg_check_seq_number(instance, msg) != 0) {
-		instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_REQUIRED_OPTION_MISSING;
-
-		return (-1);
-	}
-
-	if (qdevice_net_echo_request_timer_schedule(instance) != 0) {
-		return (-1);
+	if (msg->heartbeat_interval_set) {
+		if (qdevice_net_echo_request_timer_schedule(instance) != 0) {
+			return (-1);
+		}
 	}
 
 	return (0);
