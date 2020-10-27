@@ -273,6 +273,8 @@ qdevice_ipc_accept(struct qdevice_instance *instance, struct unix_socket_client 
 		log(LOG_ERR, "Can't alloc IPC client user data");
 		res = -1;
 		qdevice_ipc_client_disconnect(instance, *res_client);
+
+		goto return_res;
 	} else {
 		memset((*res_client)->user_data, 0, sizeof(struct qdevice_ipc_user_data));
 	}
