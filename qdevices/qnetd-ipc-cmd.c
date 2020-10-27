@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -258,6 +258,26 @@ qnetd_ipc_cmd_list_add_client_info(const struct qnetd_client *client, struct dyn
 	return (0);
 }
 
+static
+int qnetd_ipc_cmd_keep_active_partition_tie_breaker_active(const struct qnetd_cluster *cluster)
+{
+	struct qnetd_client *client;
+
+	/*
+	 * Check all clients in the cluster are configured with ffsplit algorithm and have
+	 * keep active partition tie breaker enabled.
+	 */
+	TAILQ_FOREACH(client, &cluster->client_list, cluster_entries) {
+		if (client->decision_algorithm != TLV_DECISION_ALGORITHM_TYPE_FFSPLIT ||
+		    client->keep_active_partition_tie_breaker !=
+		    TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_ENABLED) {
+			return (0);
+		}
+	}
+
+	return (1);
+}
+
 int
 qnetd_ipc_cmd_list(struct qnetd_instance *instance, struct dynar *outbuf, int verbose,
     const char *cluster_name)
@@ -265,6 +285,7 @@ qnetd_ipc_cmd_list(struct qnetd_instance *instance, struct dynar *outbuf, int ve
 	struct qnetd_cluster *cluster;
 	struct qnetd_client *client;
 	size_t cluster_no, client_no;
+	const char *kap_tb_str;		/* Keep active partition tie breaker string */
 
 	cluster_no = 0;
 	TAILQ_FOREACH(cluster, &instance->clusters, entries) {
@@ -281,9 +302,15 @@ qnetd_ipc_cmd_list(struct qnetd_instance *instance, struct dynar *outbuf, int ve
 
 		TAILQ_FOREACH(client, &cluster->client_list, cluster_entries) {
 			if (client_no == 0) {
-				if (dynar_str_catf(outbuf, "    Algorithm:\t\t%s\n",
+				kap_tb_str = "";
+				if (qnetd_ipc_cmd_keep_active_partition_tie_breaker_active(cluster)) {
+					kap_tb_str = " (KAP Tie-breaker)";
+				}
+
+				if (dynar_str_catf(outbuf, "    Algorithm:\t\t%s%s\n",
 				    tlv_decision_algorithm_type_to_str(
-				    client->decision_algorithm)) == -1) {
+				    client->decision_algorithm),
+				    kap_tb_str) == -1) {
 					return (-1);
 				}
 

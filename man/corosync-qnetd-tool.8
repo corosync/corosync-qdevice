@@ -1,5 +1,5 @@
 .\"/*
-.\" * Copyright (C) 2016 Red Hat, Inc.
+.\" * Copyright (C) 2016-2020 Red Hat, Inc.
 .\" *
 .\" * All rights reserved.
 .\" *
@@ -31,7 +31,7 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QNETD-TOOL 8 2016-06-23
+.TH COROSYNC-QNETD-TOOL 8 2020-10-27
 .SH NAME
 corosync-qnetd-tool \- corosync-qnetd control interface.
 .SH SYNOPSIS
@@ -82,7 +82,7 @@ communication socket.
 .SH LIST COMMAND OUTPUT
 .nf
 Cluster "Cluster":
-    Algorithm:          Fifty-Fifty split
+    Algorithm:          Fifty-Fifty split (KAP Tie-breaker)
     Tie-breaker:        Node with lowest node ID
     Node ID 1:
         Client address:         ::ffff:127.0.0.1:52000
@@ -97,7 +97,7 @@ Cluster "Cluster":
 
 The output contains a list of clusters. Each cluster has the cluster common options
 .I Algorithm
-and
+(optionally with Keep Active Partition Tie Breaker information) and
 .I Tie-breaker
 as configured in the corosync.conf file. Information about nodes follows.
 .I Client address

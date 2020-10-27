@@ -56,7 +56,7 @@ struct qnetd_advanced_settings {
 	size_t ipc_max_clients;
 	size_t ipc_max_send_size;
 	size_t ipc_max_receive_size;
-	uint8_t keep_active_partition_tie_breaker;
+	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker;
 };
 
 extern int		qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings);

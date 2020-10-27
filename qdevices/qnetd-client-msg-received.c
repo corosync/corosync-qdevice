@@ -571,6 +571,11 @@ qnetd_client_msg_received_set_option(struct qnetd_instance *instance, struct qne
 		client->heartbeat_interval = msg->heartbeat_interval;
 	}
 
+	if (msg->keep_active_partition_tie_breaker_set) {
+		client->keep_active_partition_tie_breaker =
+		    msg->keep_active_partition_tie_breaker;
+	}
+
 	send_buffer = send_buffer_list_get_new(&client->send_buffer_list);
 	if (send_buffer == NULL) {
 		log(LOG_ERR, "Can't alloc set option reply msg from list. "
@@ -580,7 +585,8 @@ qnetd_client_msg_received_set_option(struct qnetd_instance *instance, struct qne
 	}
 
 	if (msg_create_set_option_reply(&send_buffer->buffer, msg->seq_number_set, msg->seq_number,
-	    msg->heartbeat_interval_set, client->heartbeat_interval) == 0) {
+	    msg->heartbeat_interval_set, client->heartbeat_interval,
+	    msg->keep_active_partition_tie_breaker_set, client->keep_active_partition_tie_breaker) == 0) {
 		log(LOG_ERR, "Can't alloc set option reply msg. "
 		    "Disconnecting client connection.");
 

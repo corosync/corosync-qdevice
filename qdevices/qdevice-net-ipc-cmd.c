@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -78,6 +78,42 @@ qdevice_net_ipc_cmd_status_add_tie_breaker(struct qdevice_net_instance *instance
 }
 
 static int
+qdevice_net_ipc_cmd_status_add_kap_tb_info(struct qdevice_net_instance *instance,
+    struct dynar *outbuf, int verbose)
+{
+	const char *kap_tb_str;
+
+	if (!verbose) {
+		return (1);
+	}
+
+	switch (instance->decision_algorithm) {
+	case TLV_DECISION_ALGORITHM_TYPE_TEST:
+		kap_tb_str = "Unsupported by algorithm";
+		break;
+	case TLV_DECISION_ALGORITHM_TYPE_2NODELMS:
+	case TLV_DECISION_ALGORITHM_TYPE_LMS:
+		kap_tb_str = "Algorithm hard-coded";
+		break;
+	case TLV_DECISION_ALGORITHM_TYPE_FFSPLIT:
+		if (instance->keep_active_partition_tie_breaker) {
+			if (instance->state !=
+			    QDEVICE_NET_INSTANCE_STATE_WAITING_VOTEQUORUM_CMAP_EVENTS ||
+			    instance->server_supports_keep_active_partition_tie_breaker) {
+				kap_tb_str = "Enabled";
+			} else {
+				kap_tb_str = "Unsupported by QNetd";
+			}
+		} else {
+			kap_tb_str = "Disabled";
+		}
+		break;
+	}
+
+	return (dynar_str_catf(outbuf, "KAP Tie-breaker:\t%s\n", kap_tb_str) != -1);
+}
+
+static int
 qdevice_net_ipc_cmd_status_add_basic_info(struct qdevice_net_instance *instance,
     struct dynar *outbuf, int verbose)
 {
@@ -112,6 +148,7 @@ qdevice_net_ipc_cmd_status_add_basic_info(struct qdevice_net_instance *instance,
 		    tlv_tls_supported_to_str(instance->tls_supported)) == -1) {
 			return (0);
 		}
+
 	}
 
 	if (dynar_str_catf(outbuf, "Algorithm:\t\t%s\n",
@@ -261,6 +298,7 @@ qdevice_net_ipc_cmd_status(struct qdevice_net_instance *instance, struct dynar *
 	if (qdevice_net_ipc_cmd_status_add_header(outbuf, verbose) &&
 	    qdevice_net_ipc_cmd_status_add_basic_info(instance, outbuf, verbose) &&
 	    qdevice_net_ipc_cmd_status_add_tie_breaker(instance, outbuf, verbose) &&
+	    qdevice_net_ipc_cmd_status_add_kap_tb_info(instance, outbuf, verbose) &&
 	    qdevice_net_ipc_cmd_status_add_poll_timer_status(instance, outbuf, verbose) &&
 	    qdevice_net_ipc_cmd_status_add_state(instance, outbuf, verbose) &&
 	    qdevice_net_ipc_cmd_status_add_heuristics(instance, outbuf, verbose) &&

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -56,7 +56,7 @@
 #define TLV_TYPE_LENGTH		2
 #define TLV_LENGTH_LENGTH	2
 
-#define TLV_STATIC_SUPPORTED_OPTIONS_SIZE	23
+#define TLV_STATIC_SUPPORTED_OPTIONS_SIZE	24
 
 enum tlv_opt_type tlv_static_supported_options[TLV_STATIC_SUPPORTED_OPTIONS_SIZE] = {
     TLV_OPT_MSG_SEQ_NUMBER,
@@ -82,6 +82,7 @@ enum tlv_opt_type tlv_static_supported_options[TLV_STATIC_SUPPORTED_OPTIONS_SIZE
     TLV_OPT_QUORATE,
     TLV_OPT_TIE_BREAKER,
     TLV_OPT_HEURISTICS,
+    TLV_OPT_KEEP_ACTIVE_PARTITION_TIE_BREAKER,
 };
 
 int
@@ -417,6 +418,14 @@ tlv_add_heuristics(struct dynar *msg, enum tlv_heuristics heuristics)
 	}
 
 	return (tlv_add_u8(msg, TLV_OPT_HEURISTICS, heuristics));
+}
+
+int
+tlv_add_keep_active_partition_tie_breaker(struct dynar *msg,
+    enum tlv_keep_active_partition_tie_breaker enabled)
+{
+
+	return (tlv_add_u8(msg, TLV_OPT_KEEP_ACTIVE_PARTITION_TIE_BREAKER, enabled));
 }
 
 void
@@ -988,6 +997,29 @@ tlv_iter_decode_heuristics(struct tlv_iterator *tlv_iter, enum tlv_heuristics *h
 	return (0);
 }
 
+int
+tlv_iter_decode_keep_active_partition_tie_breaker(struct tlv_iterator *tlv_iter,
+    enum tlv_keep_active_partition_tie_breaker *keep_active_partition_tie_breaker)
+{
+	uint8_t u8;
+	enum tlv_keep_active_partition_tie_breaker tmp_keep_active_partition_tb;
+
+	if (tlv_iter_decode_u8(tlv_iter, &u8) != 0) {
+		return (-1);
+	}
+
+	tmp_keep_active_partition_tb = u8;
+
+	if (tmp_keep_active_partition_tb != TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_DISABLED &&
+	    tmp_keep_active_partition_tb != TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_ENABLED) {
+		return (-4);
+	}
+
+	*keep_active_partition_tie_breaker = tmp_keep_active_partition_tb;
+
+	return (0);
+}
+
 void
 tlv_get_supported_options(enum tlv_opt_type **supported_options, size_t *no_supported_options)
 {
@@ -1118,4 +1150,16 @@ tlv_heuristics_cmp(enum tlv_heuristics h1, enum tlv_heuristics h2)
 	assert(res == -1 || res == 0 || res == 1);
 
 	return (res);
+}
+
+const char *
+tlv_keep_active_partition_tie_breaker_to_str(enum tlv_keep_active_partition_tie_breaker kap_tb)
+{
+
+	switch (kap_tb) {
+	case TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_DISABLED: return ("Disabled"); break;
+	case TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_ENABLED: return ("Enabled"); break;
+	}
+
+	return ("Unknown keep active partition tie breaker type");
 }

@@ -106,15 +106,17 @@ struct msg_decoded {
 	uint32_t data_center_id;	/* Valid only if != 0 */
 	enum tlv_node_state node_state;	/* Valid only if != TLV_NODE_STATE_NOT_SET */
 	struct node_list nodes;		/* Valid only if node_list_is_empty(nodes) != 0 */
-	int node_list_type_set;
+	uint8_t node_list_type_set;
 	enum tlv_node_list_type node_list_type;	/* Valid only if node_list_type_set != 0 */
-	int vote_set;
+	uint8_t vote_set;
 	enum tlv_vote vote;	/* Valid only if vote_set != 0 */
-	int quorate_set;
+	uint8_t quorate_set;
 	enum tlv_quorate quorate;	/* Valid only if quorate_set != 0 */
-	int tie_breaker_set;
+	uint8_t tie_breaker_set;
 	struct tlv_tie_breaker tie_breaker;
 	enum tlv_heuristics heuristics;	/* Always valid but can be TLV_HEURISTICS_UNDEFINED */
+	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker;
+	uint8_t keep_active_partition_tie_breaker_set;
 };
 
 extern size_t		msg_create_preinit(struct dynar *msg, const char *cluster_name,
@@ -146,11 +148,15 @@ extern size_t		msg_create_init_reply(struct dynar *msg, int add_msg_seq_number,
 
 extern size_t		msg_create_set_option(struct dynar *msg,
     int add_msg_seq_number, uint32_t msg_seq_number,
-    int add_heartbeat_interval, uint32_t heartbeat_interval);
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partiton_tie_breaker);
 
 extern size_t		msg_create_set_option_reply(struct dynar *msg,
     int add_msg_seq_number, uint32_t msg_seq_number,
-    int add_heartbeat_interval, uint32_t heartbeat_interval);
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partiton_tie_breaker);
 
 extern size_t		msg_create_echo_request(struct dynar *msg, int add_msg_seq_number,
     uint32_t msg_seq_number);

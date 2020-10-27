@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -68,6 +68,7 @@ enum tlv_opt_type {
 	TLV_OPT_QUORATE = 20,
 	TLV_OPT_TIE_BREAKER = 21,
 	TLV_OPT_HEURISTICS = 22,
+	TLV_OPT_KEEP_ACTIVE_PARTITION_TIE_BREAKER = 23,
 };
 
 enum tlv_tls_supported {
@@ -162,6 +163,11 @@ enum tlv_heuristics {
 	TLV_HEURISTICS_FAIL = 2,
 };
 
+enum tlv_keep_active_partition_tie_breaker {
+	TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_DISABLED = 0,
+	TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_ENABLED = 1,
+};
+
 struct tlv_iterator {
 	const char *msg;
 	size_t msg_len;
@@ -253,6 +259,9 @@ extern int			 tlv_add_quorate(struct dynar *msg, enum tlv_quorate quorate);
 extern int			 tlv_add_heuristics(struct dynar *msg,
     enum tlv_heuristics heuristics);
 
+extern int			 tlv_add_keep_active_partition_tie_breaker(struct dynar *msg,
+    enum tlv_keep_active_partition_tie_breaker enabled);
+
 extern void			 tlv_iter_init_str(const char *msg, size_t msg_len,
     size_t msg_header_len, struct tlv_iterator *tlv_iter);
 
@@ -328,6 +337,10 @@ extern int			 tlv_iter_decode_quorate(struct tlv_iterator *tlv_iter,
 extern int			 tlv_iter_decode_heuristics(struct tlv_iterator *tlv_iter,
     enum tlv_heuristics *heuristics);
 
+extern int			 tlv_iter_decode_keep_active_partition_tie_breaker(
+    struct tlv_iterator *tlv_iter,
+    enum tlv_keep_active_partition_tie_breaker *keep_active_partition_tie_breaker);
+
 extern void			 tlv_get_supported_options(enum tlv_opt_type **supported_options,
     size_t *no_supported_options);
 
@@ -347,6 +360,9 @@ extern const char		*tlv_decision_algorithm_type_to_str(
     enum tlv_decision_algorithm_type algorithm);
 
 extern const char		*tlv_heuristics_to_str(enum tlv_heuristics heuristics);
+
+extern const char		*tlv_keep_active_partition_tie_breaker_to_str(
+    enum tlv_keep_active_partition_tie_breaker kap_tb);
 
 /*
  * Compare h1 and h2. Return -1 if h1 < h2, 0 if h1 == h2 and 1 if h1 > h2

@@ -420,7 +420,9 @@ small_buf_err:
 
 size_t
 msg_create_set_option(struct dynar *msg, int add_msg_seq_number, uint32_t msg_seq_number,
-    int add_heartbeat_interval, uint32_t heartbeat_interval)
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partiton_tie_breaker)
 {
 
 	dynar_clean(msg);
@@ -440,6 +442,13 @@ msg_create_set_option(struct dynar *msg, int add_msg_seq_number, uint32_t msg_se
 		}
 	}
 
+	if (add_keep_active_partition_tie_breaker) {
+		if (tlv_add_keep_active_partition_tie_breaker(msg,
+		    keep_active_partiton_tie_breaker) == -1) {
+			goto small_buf_err;
+		}
+	}
+
 	msg_set_len(msg, dynar_size(msg) - (MSG_TYPE_LENGTH + MSG_LENGTH_LENGTH));
 
 	return (dynar_size(msg));
@@ -450,7 +459,9 @@ small_buf_err:
 
 size_t
 msg_create_set_option_reply(struct dynar *msg, int add_msg_seq_number, uint32_t msg_seq_number,
-    int add_heartbeat_interval, uint32_t heartbeat_interval)
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partiton_tie_breaker)
 {
 
 	dynar_clean(msg);
@@ -466,6 +477,13 @@ msg_create_set_option_reply(struct dynar *msg, int add_msg_seq_number, uint32_t 
 
 	if (add_heartbeat_interval) {
 		if (tlv_add_heartbeat_interval(msg, heartbeat_interval) == -1) {
+			goto small_buf_err;
+		}
+	}
+
+	if (add_keep_active_partition_tie_breaker) {
+		if (tlv_add_keep_active_partition_tie_breaker(msg,
+		    keep_active_partiton_tie_breaker) == -1) {
 			goto small_buf_err;
 		}
 	}
@@ -841,6 +859,7 @@ msg_decode(const struct dynar *msg, struct msg_decoded *decoded_msg)
 	enum tlv_opt_type opt_type;
 	int iter_res;
 	int res;
+	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tb;
 
 	msg_decoded_destroy(decoded_msg);
 
@@ -1044,6 +1063,15 @@ msg_decode(const struct dynar *msg, struct msg_decoded *decoded_msg)
 			    &decoded_msg->heuristics)) != 0) {
 				return (res);
 			}
+			break;
+		case TLV_OPT_KEEP_ACTIVE_PARTITION_TIE_BREAKER:
+			if ((res = tlv_iter_decode_keep_active_partition_tie_breaker(&tlv_iter,
+			    &keep_active_partition_tb)) != 0) {
+				return (res);
+			}
+
+			decoded_msg->keep_active_partition_tie_breaker_set = 1;
+			decoded_msg->keep_active_partition_tie_breaker = keep_active_partition_tb;
 			break;
 		/*
 		 * Default is not defined intentionally. Compiler shows warning when

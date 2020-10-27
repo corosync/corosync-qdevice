@@ -67,7 +67,9 @@ extern int		qdevice_net_send_quorum_node_list(
     uint32_t node_list_entries, votequorum_node_t node_list[]);
 
 extern int		qdevice_net_send_set_option(struct qdevice_net_instance *instance,
-    int add_heartbeat_interval, uint32_t heartbeat_interval);
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker);
 
 #ifdef __cplusplus
 }

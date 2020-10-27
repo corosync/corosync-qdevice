@@ -355,7 +355,9 @@ qdevice_net_send_quorum_node_list(struct qdevice_net_instance *instance,
 
 int
 qdevice_net_send_set_option(struct qdevice_net_instance *instance,
-    int add_heartbeat_interval, uint32_t heartbeat_interval)
+    int add_heartbeat_interval, uint32_t heartbeat_interval,
+    int add_keep_active_partition_tie_breaker,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker)
 {
 	struct send_buffer_list_entry *send_buffer;
 
@@ -369,11 +371,14 @@ qdevice_net_send_set_option(struct qdevice_net_instance *instance,
 	instance->last_msg_seq_num++;
 
 	log(LOG_DEBUG, "Sending set option seq = "UTILS_PRI_MSG_SEQ ", "
-	    "hb(%u) = %" PRIu32,
-	    instance->last_msg_seq_num, add_heartbeat_interval, heartbeat_interval);
+	    "HB(%u) = %" PRIu32 "ms, KAP Tie-breaker(%u) = %s",
+	    instance->last_msg_seq_num, add_heartbeat_interval, heartbeat_interval,
+	    add_keep_active_partition_tie_breaker,
+	    tlv_keep_active_partition_tie_breaker_to_str(keep_active_partition_tie_breaker));
 
 	if (msg_create_set_option(&send_buffer->buffer, 1, instance->last_msg_seq_num,
-	    add_heartbeat_interval, heartbeat_interval) == 0) {
+	    add_heartbeat_interval, heartbeat_interval,
+	    add_keep_active_partition_tie_breaker, keep_active_partition_tie_breaker) == 0) {
 		log(LOG_ERR, "Can't allocate send buffer for set option msg");
 
 		send_buffer_list_discard_new(&instance->send_buffer_list, send_buffer);

@@ -348,18 +348,22 @@ qdevice_net_msg_received_init_reply(struct qdevice_net_instance *instance,
 	}
 
 	/*
-	 * Check if server supports heuristics
+	 * Check if server supports heuristics/keep active partition tie breaker
 	 */
-	res = 0;
+	instance->server_supports_heuristics = 0;
+	instance->server_supports_keep_active_partition_tie_breaker = 0;
+
 	for (zi = 0; zi < msg->no_supported_options; zi++) {
 		if (msg->supported_options[zi] == TLV_OPT_HEURISTICS) {
-			res = 1;
+			instance->server_supports_heuristics = 1;
+		}
+
+		if (msg->supported_options[zi] == TLV_OPT_KEEP_ACTIVE_PARTITION_TIE_BREAKER) {
+			instance->server_supports_keep_active_partition_tie_breaker = 1;
 		}
 	}
 
-	instance->server_supports_heuristics = res;
-
-	if (!res) {
+	if (!instance->server_supports_heuristics) {
 		active_heuristics_mode = instance->qdevice_instance_ptr->heuristics_instance.mode;
 
 		if (active_heuristics_mode == QDEVICE_HEURISTICS_MODE_ENABLED ||
@@ -450,6 +454,13 @@ qdevice_net_msg_received_set_option_reply(struct qdevice_net_instance *instance,
 
 		return (-1);
 	}
+
+	log(LOG_DEBUG, "Received set option reply seq(%u) = "UTILS_PRI_MSG_SEQ ", "
+	    "HB(%u) = %" PRIu32 "ms, KAP Tie-breaker(%u) = %s",
+	    msg->seq_number_set, msg->seq_number,
+	    msg->heartbeat_interval_set, msg->heartbeat_interval,
+	    msg->keep_active_partition_tie_breaker_set,
+	    tlv_keep_active_partition_tie_breaker_to_str(msg->keep_active_partition_tie_breaker));
 
 	if (msg->heartbeat_interval_set) {
 		if (qdevice_net_echo_request_timer_schedule(instance) != 0) {

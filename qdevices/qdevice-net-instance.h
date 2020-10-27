@@ -103,6 +103,8 @@ struct qdevice_net_instance {
 	const struct qdevice_advanced_settings *advanced_settings;
 	struct timer_list_entry *regular_heuristics_timer;
 	int server_supports_heuristics;
+	int server_supports_keep_active_partition_tie_breaker;
+	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker;
 	enum tlv_heuristics latest_regular_heuristics_result;
 	enum tlv_heuristics latest_connect_heuristics_result;
 	enum tlv_heuristics latest_vq_heuristics_result;
@@ -115,6 +117,7 @@ extern int		qdevice_net_instance_init(struct qdevice_net_instance *instance,
     uint32_t sync_heartbeat_interval, uint32_t cast_vote_timer_interval,
     const char *host_addr, uint16_t host_port, const char *cluster_name,
     const struct tlv_tie_breaker *tie_breaker, uint32_t connect_timeout, int force_ip_version,
+    enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker,
     int cmap_fd, int votequorum_fd, int local_socket_fd,
     const struct qdevice_advanced_settings *advanced_settings,
     int heuristics_pipe_cmd_send_fd, int heuristics_pipe_cmd_recv_fd,

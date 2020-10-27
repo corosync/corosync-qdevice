@@ -239,6 +239,18 @@ qdevice_net_connect_heuristics_exec_result_callback(uint32_t seq_number,
 	}
 
 	/*
+	 * Inform qnetd about connection options
+	 */
+	if (net_instance->server_supports_keep_active_partition_tie_breaker) {
+		if (qdevice_net_send_set_option(net_instance, 0, 0,
+		    net_instance->server_supports_keep_active_partition_tie_breaker,
+		    net_instance->keep_active_partition_tie_breaker) != 0) {
+			net_instance->disconnect_reason = QDEVICE_NET_DISCONNECT_REASON_CANT_ALLOCATE_MSG_BUFFER;
+			return (0);
+		}
+	}
+
+	/*
 	 * Now we can finally really send node list, votequorum node list and update timer
 	 */
 	if (send_config_node_list) {

@@ -75,7 +75,7 @@ qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings)
 	settings->ipc_max_receive_size = QNETD_DEFAULT_IPC_MAX_RECEIVE_SIZE;
 	settings->ipc_max_send_size = QNETD_DEFAULT_IPC_MAX_SEND_SIZE;
 
-	settings->keep_active_partition_tie_breaker = QNETD_DEFAULT_KEEP_ACTIVE_PARTITION_TIE_BREAKER;
+	settings->keep_active_partition_tie_breaker = QNETD_DEFAULT_KEEP_ACTIVE_PARTITION_TB;
 
 	return (0);
 }

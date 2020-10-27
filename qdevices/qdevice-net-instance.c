@@ -48,7 +48,8 @@ qdevice_net_instance_init(struct qdevice_net_instance *instance,
     uint32_t sync_heartbeat_interval, uint32_t cast_vote_timer_interval,
     const char *host_addr, uint16_t host_port, const char *cluster_name,
     const struct tlv_tie_breaker *tie_breaker, uint32_t connect_timeout,
-    int force_ip_version, int cmap_fd, int votequorum_fd, int local_socket_fd,
+    int force_ip_version, enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker,
+    int cmap_fd, int votequorum_fd, int local_socket_fd,
     const struct qdevice_advanced_settings *advanced_settings,
     int heuristics_pipe_cmd_send_fd, int heuristics_pipe_cmd_recv_fd,
     int heuristics_pipe_log_recv_fd)
@@ -72,6 +73,7 @@ qdevice_net_instance_init(struct qdevice_net_instance *instance,
 	instance->force_ip_version = force_ip_version;
 	instance->last_echo_reply_received_time = ((time_t) -1);
 	instance->connected_since_time = ((time_t) -1);
+	instance->keep_active_partition_tie_breaker = keep_active_partition_tie_breaker;
 
 	memcpy(&instance->tie_breaker, tie_breaker, sizeof(*tie_breaker));
 
@@ -139,6 +141,7 @@ qdevice_net_instance_init_from_cmap(struct qdevice_instance *instance)
 	uint32_t connect_timeout;
 	struct qdevice_net_instance *net_instance;
 	int force_ip_version;
+	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tb;
 
 	cmap_handle = instance->cmap_handle;
 
@@ -314,6 +317,26 @@ qdevice_net_instance_init_from_cmap(struct qdevice_instance *instance)
 		free(str);
 	}
 
+	keep_active_partition_tb = QDEVICE_NET_DEFAULT_KEEP_ACTIVE_PARTITION_TB;
+
+	if (cmap_get_string(cmap_handle, "quorum.device.net.keep_active_partition_tie_breaker",
+	    &str) == CS_OK) {
+		if ((i = utils_parse_bool_str(str)) == -1) {
+			log(LOG_ERR, "quorum.device.net.keep_active_partition_tie_breaker "
+			    "value is not valid.");
+			free(str);
+			goto error_free_cluster_name;
+		} else {
+			if (i == 1) {
+				keep_active_partition_tb = TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_ENABLED;
+			} else {
+				keep_active_partition_tb = TLV_KEEP_ACTIVE_PARTITION_TIE_BREAKER_DISABLED;
+			}
+		}
+
+		free(str);
+	}
+
 	/*
 	 * Really initialize instance
 	 */
@@ -321,7 +344,7 @@ qdevice_net_instance_init_from_cmap(struct qdevice_instance *instance)
 	    tls_supported, decision_algorithm,
 	    heartbeat_interval, sync_heartbeat_interval, cast_vote_timer_interval,
 	    host_addr, host_port, cluster_name, &tie_breaker, connect_timeout,
-	    force_ip_version,
+	    force_ip_version, keep_active_partition_tb,
 	    instance->cmap_poll_fd, instance->votequorum_poll_fd,
 	    instance->local_ipc.socket, instance->advanced_settings,
 	    instance->heuristics_instance.pipe_cmd_send,
