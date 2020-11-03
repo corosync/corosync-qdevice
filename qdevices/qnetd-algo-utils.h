@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Red Hat, Inc.
+ * Copyright (c) 2016-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -34,6 +34,11 @@
 
 #ifndef _QNETD_ALGO_UTILS_H_
 #define _QNETD_ALGO_UTILS_H_
+
+#include <sys/types.h>
+
+#include <sys/queue.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {

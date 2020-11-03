@@ -36,6 +36,8 @@
 #define _PR_POLL_LOOP_H_
 
 #include <sys/types.h>
+
+#include <sys/queue.h>
 #include <inttypes.h>
 
 #include <nspr.h>
