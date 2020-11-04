@@ -124,7 +124,7 @@ check_timer_list_basics(void)
 	timer_list_fn1_called = 0;
 	tlist_entry = timer_list_add(&tlist, SHORT_TIMEOUT / 2, timer_list_fn1, &timer_list_fn1_called, timer_list_fn1);
 	assert(tlist_entry != NULL);
-	poll(NULL, 0, SHORT_TIMEOUT);
+	(void)poll(NULL, 0, SHORT_TIMEOUT);
 	assert(timer_list_time_to_expire(&tlist) == 0);
 	assert(timer_list_time_to_expire_ms(&tlist) == 0);
 	timer_list_expire(&tlist);
@@ -141,7 +141,7 @@ check_timer_list_basics(void)
 	timer_list_fn1_called = 0;
 	tlist_entry = timer_list_add(&tlist, LONG_TIMEOUT, timer_list_fn1, &timer_list_fn1_called, timer_list_fn1);
 	assert(tlist_entry != NULL);
-	poll(NULL, 0, SHORT_TIMEOUT);
+	(void)poll(NULL, 0, SHORT_TIMEOUT);
 	assert(timer_list_time_to_expire(&tlist) > 0);
 	assert(timer_list_time_to_expire_ms(&tlist) > 0);
 	timer_list_expire(&tlist);
@@ -169,7 +169,7 @@ check_timer_list_basics(void)
 		timer_list_reschedule(&tlist, tlist_speed_entry[i]);
 	}
 
-	poll(NULL, 0, SHORT_TIMEOUT);
+	(void)poll(NULL, 0, SHORT_TIMEOUT);
 	timer_list_expire(&tlist);
 	assert(timer_list_fn1_called == SPEED_TEST_NO_ITEMS);
 
