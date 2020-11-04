@@ -73,13 +73,16 @@ msg_get_header_length(void)
 	return (MSG_TYPE_LENGTH + MSG_LENGTH_LENGTH);
 }
 
-static void
+static int
 msg_add_type(struct dynar *msg, enum msg_type type)
 {
 	uint16_t ntype;
+	int res;
 
 	ntype = htons((uint16_t)type);
-	dynar_cat(msg, &ntype, sizeof(ntype));
+	res = dynar_cat(msg, &ntype, sizeof(ntype));
+
+	return (res);
 }
 
 enum msg_type
@@ -98,13 +101,16 @@ msg_get_type(const struct dynar *msg)
  * We don't know size of message before call of this function, so zero is
  * added. Real value is set afterwards by msg_set_len.
  */
-static void
+static int
 msg_add_len(struct dynar *msg)
 {
 	uint32_t len;
+	int res;
 
 	len = 0;
-	dynar_cat(msg, &len, sizeof(len));
+	res = dynar_cat(msg, &len, sizeof(len));
+
+	return (res);
 }
 
 static void
@@ -148,8 +154,13 @@ msg_create_preinit(struct dynar *msg, const char *cluster_name, int add_msg_seq_
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_PREINIT);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_PREINIT) == -1) {
+		goto small_buf_err;
+	}
+
+	if (msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
