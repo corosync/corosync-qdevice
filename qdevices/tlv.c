@@ -98,9 +98,17 @@ tlv_add(struct dynar *msg, enum tlv_opt_type opt_type, uint16_t opt_len, const v
 	nopt_type = htons((uint16_t)opt_type);
 	nlen = htons(opt_len);
 
-	dynar_cat(msg, &nopt_type, sizeof(nopt_type));
-	dynar_cat(msg, &nlen, sizeof(nlen));
-	dynar_cat(msg, value, opt_len);
+	if (dynar_cat(msg, &nopt_type, sizeof(nopt_type)) == -1) {
+		return (-1);
+	}
+
+	if (dynar_cat(msg, &nlen, sizeof(nlen)) == -1) {
+		return (-1);
+	}
+
+	if (dynar_cat(msg, value, opt_len) == -1) {
+		return (-1);
+	}
 
 	return (0);
 }
