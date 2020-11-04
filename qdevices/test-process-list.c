@@ -147,6 +147,8 @@ find_exec_path(const char *exec)
 		return (res_path);
 	}
 
+	free(res_path);
+
 	return (NULL);
 }
 
@@ -167,7 +169,7 @@ wait_for_no_running(struct process_list *plist, int no_running, int no_in_kill_l
 			return (0);
 		}
 
-		poll(NULL, 0, timeout);
+		(void)poll(NULL, 0, timeout);
 	}
 
 	return (-1);
@@ -188,7 +190,7 @@ wait_for_sigusrs_received(void)
 			return (0);
 		}
 
-		poll(NULL, 0, timeout);
+		(void)poll(NULL, 0, timeout);
 	}
 
 	return (-1);
