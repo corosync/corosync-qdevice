@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -66,7 +66,9 @@ struct timer_list_entry {
 };
 
 struct timer_list {
-	TAILQ_HEAD(, timer_list_entry) list;
+	size_t allocated;
+	size_t size;
+	struct timer_list_entry **entries;
 	TAILQ_HEAD(, timer_list_entry) free_list;
 };
 
@@ -88,6 +90,8 @@ extern PRIntervalTime			 timer_list_time_to_expire(struct timer_list *tlist);
 extern uint32_t				 timer_list_time_to_expire_ms(struct timer_list *tlist);
 
 extern void				 timer_list_free(struct timer_list *tlist);
+
+extern int				 timer_list_debug_is_valid_heap(struct timer_list *tlist);
 
 #ifdef __cplusplus
 }
