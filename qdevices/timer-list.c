@@ -102,24 +102,43 @@ timer_list_heap_index_parent(size_t index)
 }
 
 static void
+timer_list_heap_entry_set(struct timer_list *tlist, size_t item_pos, struct timer_list_entry *entry)
+{
+
+	assert(item_pos < tlist->size);
+
+	tlist->entries[item_pos] = entry;
+	tlist->entries[item_pos]->heap_pos = item_pos;
+}
+
+static struct timer_list_entry *
+timer_list_heap_entry_get(struct timer_list *tlist, size_t item_pos)
+{
+
+	assert(item_pos < tlist->size);
+
+	return (tlist->entries[item_pos]);
+}
+
+static void
 timer_list_heap_sift_up(struct timer_list *tlist, size_t item_pos)
 {
 	size_t parent_pos;
 	struct timer_list_entry *parent_entry;
 	struct timer_list_entry *item_entry;
 
-	item_entry = tlist->entries[item_pos];
+	item_entry = timer_list_heap_entry_get(tlist, item_pos);
 
 	parent_pos = timer_list_heap_index_parent(item_pos);
 
 	while (item_pos > 0 &&
-	    (parent_entry = tlist->entries[parent_pos],
+	    (parent_entry = timer_list_heap_entry_get(tlist, parent_pos),
 	    timer_list_entry_cmp(parent_entry, item_entry, item_entry->epoch) > 0)) {
 		/*
 		 * Swap item and parent
 		 */
-		tlist->entries[parent_pos] = item_entry;
-		tlist->entries[item_pos] = parent_entry;
+		timer_list_heap_entry_set(tlist, parent_pos, item_entry);
+		timer_list_heap_entry_set(tlist, item_pos, parent_entry);
 
 		item_pos = parent_pos;
 		parent_pos = timer_list_heap_index_parent(item_pos);
@@ -143,17 +162,17 @@ timer_list_heap_sift_down(struct timer_list *tlist, size_t item_pos)
 		left_pos = timer_list_heap_index_left(item_pos);
 		right_pos = timer_list_heap_index_right(item_pos);
 
-		smallest_entry = tlist->entries[smallest_pos];
+		smallest_entry = timer_list_heap_entry_get(tlist, smallest_pos);
 
 		if (left_pos < tlist->size &&
-		    (left_entry = tlist->entries[left_pos],
+		    (left_entry = timer_list_heap_entry_get(tlist, left_pos),
 		    timer_list_entry_cmp(left_entry, smallest_entry, smallest_entry->epoch) < 0)) {
 			smallest_entry = left_entry;
 			smallest_pos = left_pos;
 		}
 
 		if (right_pos < tlist->size &&
-		    (right_entry = tlist->entries[right_pos],
+		    (right_entry = timer_list_heap_entry_get(tlist, right_pos),
 		    timer_list_entry_cmp(right_entry, smallest_entry, smallest_entry->epoch) < 0)) {
 			smallest_entry = right_entry;
 			smallest_pos = right_pos;
@@ -168,47 +187,30 @@ timer_list_heap_sift_down(struct timer_list *tlist, size_t item_pos)
 			/*
 			 * Swap item with smallest child
 			 */
-			tmp_entry = tlist->entries[item_pos];
-			tlist->entries[item_pos] = smallest_entry;
-			tlist->entries[smallest_pos] = tmp_entry;
+			tmp_entry = timer_list_heap_entry_get(tlist, item_pos);
+			timer_list_heap_entry_set(tlist, item_pos, smallest_entry);
+			timer_list_heap_entry_set(tlist, smallest_pos, tmp_entry);
 
 			item_pos = smallest_pos;
 		}
 	}
 }
 
-static int
+static void
 timer_list_heap_delete(struct timer_list *tlist, struct timer_list_entry *entry)
 {
 	size_t entry_pos;
-	size_t i;
 	struct timer_list_entry *replacement_entry;
 	int cmp_entries;
 
-	entry_pos = tlist->size;
-
-	/*
-	 * Find the element index
-	 */
-	for (i = 0; i < tlist->size; i++) {
-		if (tlist->entries[i] == entry) {
-			entry_pos = i;
-			break ;
-		}
-	}
-
-	if (entry_pos == tlist->size) {
-		/*
-		 * Item not found
-		 */
-		return (-1);
-	}
+	entry_pos = entry->heap_pos;
+	entry->heap_pos = (~(size_t)0);
 
 	/*
 	 * Swap element with last element
 	 */
-	replacement_entry = tlist->entries[tlist->size - 1];
-	tlist->entries[entry_pos] = tlist->entries[tlist->size - 1];
+	replacement_entry = timer_list_heap_entry_get(tlist, tlist->size - 1);
+	timer_list_heap_entry_set(tlist, entry_pos, replacement_entry);
 
 	/*
 	 * And "remove" last element (= entry)
@@ -225,8 +227,6 @@ timer_list_heap_delete(struct timer_list *tlist, struct timer_list_entry *entry)
 	} else if (cmp_entries > 0) {
 		timer_list_heap_sift_down(tlist, entry_pos);
 	}
-
-	return (0);
 }
 
 /*
@@ -244,19 +244,19 @@ timer_list_debug_is_valid_heap(struct timer_list *tlist)
 	struct timer_list_entry *cur_entry;
 
 	for (i = 0; i < tlist->size; i++) {
-		cur_entry = tlist->entries[i];
+		cur_entry = timer_list_heap_entry_get(tlist, i);
 
 		left_pos = timer_list_heap_index_left(i);
 		right_pos = timer_list_heap_index_right(i);
 
 		if (left_pos < tlist->size &&
-		    (left_entry = tlist->entries[left_pos],
+		    (left_entry = timer_list_heap_entry_get(tlist, left_pos),
 		    timer_list_entry_cmp(left_entry, cur_entry, cur_entry->epoch) < 0)) {
 			return (0);
 		}
 
 		if (right_pos < tlist->size &&
-		    (right_entry = tlist->entries[right_pos],
+		    (right_entry = timer_list_heap_entry_get(tlist, right_pos),
 		    timer_list_entry_cmp(right_entry, cur_entry, cur_entry->epoch) < 0)) {
 			return (0);
 		}
@@ -292,8 +292,8 @@ timer_list_insert_into_list(struct timer_list *tlist, struct timer_list_entry *n
 		tlist->entries = new_entries;
 	}
 
-	tlist->entries[tlist->size] = new_entry;
 	tlist->size++;
+	timer_list_heap_entry_set(tlist, tlist->size - 1, new_entry);
 
 	timer_list_heap_sift_up(tlist, tlist->size - 1);
 
@@ -333,6 +333,7 @@ timer_list_add(struct timer_list *tlist, PRUint32 interval, timer_list_cb_fn fun
 	new_entry->user_data1 = data1;
 	new_entry->user_data2 = data2;
 	new_entry->is_active = 1;
+	new_entry->heap_pos = (~(size_t)0);
 
 	if (timer_list_insert_into_list(tlist, new_entry) != 0) {
 		TAILQ_INSERT_HEAD(&tlist->free_list, new_entry, entries);
@@ -346,13 +347,12 @@ timer_list_add(struct timer_list *tlist, PRUint32 interval, timer_list_cb_fn fun
 void
 timer_list_reschedule(struct timer_list *tlist, struct timer_list_entry *entry)
 {
-	int res;
 
 	if (entry->is_active) {
-		res = timer_list_heap_delete(tlist, entry);
-		assert(res == 0);
+		timer_list_heap_delete(tlist, entry);
 
 		entry->epoch = PR_IntervalNow();
+
 		timer_list_insert_into_list(tlist, entry);
 	}
 }
@@ -367,7 +367,7 @@ timer_list_expire(struct timer_list *tlist)
 	now = PR_IntervalNow();
 
 	while (tlist->size > 0 &&
-	    (entry = tlist->entries[0],
+	    (entry = timer_list_heap_entry_get(tlist, 0),
 	    timer_list_entry_time_to_expire(entry, now) == 0)) {
 		/*
 		 * Expired
@@ -382,10 +382,10 @@ timer_list_expire(struct timer_list *tlist)
 			/*
 			 * Schedule again
 			 */
-			res = timer_list_heap_delete(tlist, entry);
-			assert(res == 0);
+			timer_list_heap_delete(tlist, entry);
 
 			entry->epoch = now;
+
 			timer_list_insert_into_list(tlist, entry);
 		}
 	}
@@ -400,7 +400,7 @@ timer_list_time_to_expire(struct timer_list *tlist)
 		return (PR_INTERVAL_NO_TIMEOUT);
 	}
 
-	entry = tlist->entries[0];
+	entry = timer_list_heap_entry_get(tlist, 0);
 
 	return (timer_list_entry_time_to_expire(entry, PR_IntervalNow()));
 }
@@ -416,7 +416,7 @@ timer_list_time_to_expire_ms(struct timer_list *tlist)
 		return (u32);
 	}
 
-	entry = tlist->entries[0];
+	entry = timer_list_heap_entry_get(tlist, 0);
 
 	return (PR_IntervalToMilliseconds(timer_list_entry_time_to_expire(entry, PR_IntervalNow())));
 }
@@ -424,14 +424,12 @@ timer_list_time_to_expire_ms(struct timer_list *tlist)
 void
 timer_list_delete(struct timer_list *tlist, struct timer_list_entry *entry)
 {
-	int res;
 
 	if (entry->is_active) {
 		/*
 		 * Remove item from heap and move it to free list
 		 */
-		res = timer_list_heap_delete(tlist, entry);
-		assert(res == 0);
+		timer_list_heap_delete(tlist, entry);
 
 		TAILQ_INSERT_HEAD(&tlist->free_list, entry, entries);
 		entry->is_active = 0;
@@ -446,7 +444,7 @@ timer_list_free(struct timer_list *tlist)
 	size_t i;
 
 	for (i = 0; i < tlist->size; i++) {
-		free(tlist->entries[i]);
+		free(timer_list_heap_entry_get(tlist, i));
 	}
 
 	free(tlist->entries);

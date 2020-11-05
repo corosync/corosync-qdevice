@@ -62,6 +62,7 @@ struct timer_list_entry {
 	void *user_data1;
 	void *user_data2;
 	int is_active;
+	size_t heap_pos;
 	TAILQ_ENTRY(timer_list_entry) entries;
 };
 
