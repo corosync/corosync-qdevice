@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -132,7 +132,8 @@ find_exec_path(const char *exec)
 	char *res_path;
 	int res;
 
-	assert((res_path = malloc(PATH_MAX)) != NULL);
+	res_path = malloc(PATH_MAX);
+	assert(res_path != NULL);
 	memset(res_path, 0, PATH_MAX);
 
 	res = snprintf(res_path, PATH_MAX, "/bin/%s", exec);
@@ -214,8 +215,10 @@ main(void)
 	    "bash -c \"trap 'echo trap' SIGINT SIGTERM;kill -USR2 %ld;while true;do sleep 1;done\"",
 	    (long int)getpid()) < PATH_MAX);
 
-	assert((true_path = find_exec_path("true")) != NULL);
-	assert((false_path = find_exec_path("false")) != NULL);
+	true_path = find_exec_path("true");
+	assert(true_path != NULL);
+	false_path = find_exec_path("false");
+	assert(false_path != NULL);
 
 	signal_handlers_register();
 
