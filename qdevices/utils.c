@@ -42,6 +42,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libgen.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -233,6 +234,36 @@ utils_strtonum(const char *str, long long int min_val, long long int max_val,
 	}
 
 	*res = tmp_ll;
+
+	return (0);
+}
+
+/*
+ * Safer wrapper of strtod. Return 0 on success, otherwise -1.
+ */
+int
+utils_strtod(const char *str, double min_val, double max_val,
+    double *res)
+{
+	double tmp_d;
+	char *ep;
+
+	if (min_val > max_val) {
+		return (-1);
+	}
+
+	errno = 0;
+
+	tmp_d = strtod(str, &ep);
+	if (ep == str || *ep != '\0' || errno != 0) {
+		return (-1);
+	}
+
+	if (tmp_d < min_val || tmp_d > max_val || isnan(tmp_d)) {
+		return (-1);
+	}
+
+	*res = tmp_d;
 
 	return (0);
 }

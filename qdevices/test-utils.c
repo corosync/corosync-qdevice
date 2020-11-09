@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 #include <errno.h>
 
 #include "utils.h"
@@ -44,6 +45,8 @@ main(void)
 {
 	long long int ll;
 	long long int lli;
+	double dbl;
+	double dbli;
 	char buf[32];
 
 	assert(utils_strtonum("0", 0, 100, &ll) == 0);
@@ -91,6 +94,48 @@ main(void)
 	assert(utils_parse_bool_str("of") == -1);
 	assert(utils_parse_bool_str("noo") == -1);
 	assert(utils_parse_bool_str("01") == -1);
+
+	assert(utils_strtod("0", 0, 100, &dbl) == 0);
+	assert(dbl == 0);
+
+	assert(utils_strtod("0.0", 0, 100, &dbl) == 0);
+	assert(dbl == 0);
+
+	assert(utils_strtod("100", 0, 100, &dbl) == 0);
+	assert(dbl == 100);
+
+	assert(utils_strtod("100.0", 0, 100, &dbl) == 0);
+	assert(dbl == 100);
+
+	assert(utils_strtod("99.9", 0, 100, &dbl) == 0);
+	assert(dbl == 99.9);
+
+	assert(utils_strtod("101", 0, 100, &dbl) != 0);
+	assert(utils_strtod("0", 1, 100, &dbl) != 0);
+
+	errno = ERANGE;
+	assert(utils_strtod("10", 0, 100, &dbl) == 0);
+	assert(dbl == 10);
+
+	assert(utils_strtod("-1", -1, 0, &dbl) == 0);
+	assert(dbl == -1);
+
+	assert(utils_strtod("-10", -20, -10, &dbl) == 0);
+	assert(dbl == -10);
+
+	assert(utils_strtod("0", 1, 0, &dbl) == -1);
+
+	for (dbli = -100; dbli <= 100; dbli += 0.01) {
+		assert(snprintf(buf, sizeof(buf), "%f", dbli) > 0);
+
+		assert(utils_strtod(buf, -100, 101, &dbl) == 0);
+		assert(fabs(dbl - dbli) < 0.0001);
+	}
+
+	assert(utils_strtod("test", -1000, 1000, &dbl) == -1);
+	assert(utils_strtod("12a", -1000, 1000, &dbl) == -1);
+	assert(utils_strtod("inf", -1000, 1000, &dbl) == -1);
+	assert(utils_strtod("nan", -1000, 1000, &dbl) == -1);
 
 	return (0);
 }
