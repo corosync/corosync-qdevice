@@ -1,0 +1,7 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+confdir=@COROSYSCONFDIR@
+
+Name: @PACKAGE@
+Version: @VERSION@
+Description: @PACKAGE@ build information required for downstream projects

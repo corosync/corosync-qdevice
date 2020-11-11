@@ -105,6 +105,7 @@ AC_CONFIG_FILES([Makefile
 		 qdevices/Makefile
 		 man/Makefile
 		 init/Makefile
+		 corosync-qdevice.pc
 		 ])
 
 # ===============================================

@@ -10,6 +10,7 @@ doc
 Makefile
 Makefile.in
 corosync-qdevice.spec
+corosync-qdevice.pc
 aclocal.m4
 autom4te.cache/
 compile

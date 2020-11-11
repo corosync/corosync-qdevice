@@ -147,6 +147,18 @@ fi
 %{_mandir}/man8/corosync-qdevice-net-certutil.8*
 %{_mandir}/man8/corosync-qdevice.8*
 
+%package -n corosync-qdevice-devel
+Summary: The Corosync Cluster Engine Qdevice Network Development Kit
+Requires: pkgconfig
+
+%description -n corosync-qdevice-devel
+This package contains files used to develop using
+The Corosync Cluster Engine Qdevice
+
+%files -n corosync-qdevice-devel
+%license LICENSE
+%{_datadir}/pkgconfig/corosync-qdevice.pc
+
 %package -n corosync-qnetd
 Summary: The Corosync Cluster Engine Qdevice Network Daemon
 Requires: nss-tools
