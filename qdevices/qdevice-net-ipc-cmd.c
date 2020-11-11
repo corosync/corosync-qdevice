@@ -87,6 +87,8 @@ qdevice_net_ipc_cmd_status_add_kap_tb_info(struct qdevice_net_instance *instance
 		return (1);
 	}
 
+	kap_tb_str = "";
+
 	switch (instance->decision_algorithm) {
 	case TLV_DECISION_ALGORITHM_TYPE_TEST:
 		kap_tb_str = "Unsupported by algorithm";
