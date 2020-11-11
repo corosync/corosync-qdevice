@@ -48,6 +48,9 @@ MAINTAINERCLEANFILES	= Makefile.in aclocal.m4 configure depcomp \
 
 dist_doc_DATA		= LICENSE
 
+pkgconfigdir		= ${prefix}/share/pkgconfig
+pkgconfig_DATA		= corosync-qdevice.pc
+
 SUBDIRS			= qdevices man init
 
 install-exec-local:
