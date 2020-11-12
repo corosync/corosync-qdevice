@@ -107,6 +107,22 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 
 	node_list_init(list);
 
+	/*
+	 * Fill clear high node bit
+	 */
+	clear_node_high_bit = 0;
+
+	if (cmap_get_string(cmap_handle, "totem.clear_node_high_bit", &tmp_str) == CS_OK) {
+		if (strcmp (tmp_str, "yes") == 0) {
+			clear_node_high_bit = 1;
+		}
+
+		free(tmp_str);
+	}
+
+	/*
+	 * Iterate nodelist
+	 */
 	cs_err = cmap_iter_init(cmap_handle, "nodelist.node.", &iter_handle);
 	if (cs_err != CS_OK) {
 		return (-1);
@@ -129,17 +145,6 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			/*
 			 * Nodeid doesn't exists -> autogenerate node id
 			 */
-			clear_node_high_bit = 0;
-
-			if (cmap_get_string(cmap_handle, "totem.clear_node_high_bit",
-			    &tmp_str) == CS_OK) {
-				if (strcmp (tmp_str, "yes") == 0) {
-					clear_node_high_bit = 1;
-				}
-
-				free(tmp_str);
-			}
-
 			if (cmap_get_string(cmap_handle, key_name, &addr0_str) != CS_OK) {
 				return (-1);
 			}
