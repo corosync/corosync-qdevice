@@ -171,6 +171,13 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 		}
 	}
 
+	if (node_list_is_empty(list)) {
+		log(LOG_ERR, "No configured nodes found - configuration without nodelist is not supported");
+		ret_value = -1;
+
+		goto iter_finalize;
+	}
+
 iter_finalize:
 	cmap_iter_finalize(cmap_handle, iter_handle);
 
