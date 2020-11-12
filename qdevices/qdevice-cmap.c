@@ -50,7 +50,7 @@
 #include "utils.h"
 
 static uint32_t
-qdevice_cmap_autogenerate_node_id(const char *addr, int clear_node_high_byte)
+qdevice_cmap_autogenerate_node_id(const char *addr, int clear_node_high_bit)
 {
 	struct addrinfo *ainfo;
 	struct addrinfo ahints;
@@ -80,7 +80,7 @@ qdevice_cmap_autogenerate_node_id(const char *addr, int clear_node_high_byte)
 
 	ret = htonl(i);
 
-	if (clear_node_high_byte) {
+	if (clear_node_high_bit) {
 		ret &= 0x7FFFFFFF;
 	}
 
@@ -101,7 +101,7 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 	uint32_t data_center_id;
 	char *tmp_str;
 	char *addr0_str;
-	int clear_node_high_byte;
+	int clear_node_high_bit;
 
 	ret_value = 0;
 
@@ -129,12 +129,12 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			/*
 			 * Nodeid doesn't exists -> autogenerate node id
 			 */
-			clear_node_high_byte = 0;
+			clear_node_high_bit = 0;
 
 			if (cmap_get_string(cmap_handle, "totem.clear_node_high_bit",
 			    &tmp_str) == CS_OK) {
 				if (strcmp (tmp_str, "yes") == 0) {
-					clear_node_high_byte = 1;
+					clear_node_high_bit = 1;
 				}
 
 				free(tmp_str);
@@ -145,7 +145,7 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			}
 
 			node_id = qdevice_cmap_autogenerate_node_id(addr0_str,
-			    clear_node_high_byte);
+			    clear_node_high_bit);
 
 			free(addr0_str);
 		} else if (cs_err != CS_OK) {
