@@ -93,6 +93,7 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 	cs_error_t cs_err;
 	cmap_iter_handle_t iter_handle;
 	char key_name[CMAP_KEYNAME_MAXLEN + 1];
+	char ring0_addr_key[CMAP_KEYNAME_MAXLEN + 1];
 	char tmp_key[CMAP_KEYNAME_MAXLEN + 1];
 	int res;
 	int ret_value;
@@ -134,7 +135,7 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			continue;
 		}
 
-		if (strcmp(tmp_key, "ring0_addr") != 0) {
+		if (strcmp(tmp_key, "ring0_addr") != 0 && strcmp(tmp_key, "name") != 0) {
 			continue;
 		}
 
@@ -145,7 +146,19 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			/*
 			 * Nodeid doesn't exists -> autogenerate node id
 			 */
-			if (cmap_get_string(cmap_handle, key_name, &addr0_str) != CS_OK) {
+
+			/*
+			 * New corosync supports configuration without ring0_addr but then
+			 * nodeid has to be specified (not needed for corosync but qdevice
+			 * needs information about all nodes) so fail when it's not possible to
+			 * read ring0_addr
+			 */
+			snprintf(ring0_addr_key, CMAP_KEYNAME_MAXLEN, "nodelist.node.%u.ring0_addr",
+			    node_pos);
+
+			if (cmap_get_string(cmap_handle, ring0_addr_key, &addr0_str) != CS_OK) {
+				log(LOG_ERR, "Cant find nodeid or ring0_addr for a node. "
+				    "One of them needs to be defined for every node.");
 				return (-1);
 			}
 
@@ -164,6 +177,13 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 			data_center_id = 0;
 		}
 
+		if (node_list_find_node_id(list, node_id) != NULL) {
+			/*
+			 * Node is already in the list (both ring0_addr and name exists)
+			 */
+			continue ;
+		}
+
 		if (node_list_add(list, node_id, data_center_id, TLV_NODE_STATE_NOT_SET) == NULL) {
 			ret_value = -1;
 
@@ -172,10 +192,13 @@ qdevice_cmap_get_nodelist(cmap_handle_t cmap_handle, struct node_list *list)
 	}
 
 	if (node_list_is_empty(list)) {
-		log(LOG_ERR, "No configured nodes found - configuration without nodelist is not supported");
+		log(LOG_ERR, "No configured nodes found - configuration without node list is not supported");
 		ret_value = -1;
 
 		goto iter_finalize;
+	} else {
+		log(LOG_DEBUG, "Configuration node list:");
+		log_common_debug_dump_node_list(list);
 	}
 
 iter_finalize:
