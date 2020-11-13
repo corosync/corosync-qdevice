@@ -74,8 +74,8 @@ extern "C" {
 #define QNETD_DEFAULT_DPD_INTERVAL			(1*1000)
 #define QNETD_MIN_DPD_INTERVAL				1
 
-#define QNETD_DEFAULT_LOCK_FILE				LOCALSTATEDIR"/run/corosync-qnetd/corosync-qnetd.pid"
-#define QNETD_DEFAULT_LOCAL_SOCKET_FILE			LOCALSTATEDIR"/run/corosync-qnetd/corosync-qnetd.sock"
+#define QNETD_DEFAULT_LOCK_FILE				LOCALSTATEDIR "/run/corosync-qnetd/corosync-qnetd.pid"
+#define QNETD_DEFAULT_LOCAL_SOCKET_FILE			LOCALSTATEDIR "/run/corosync-qnetd/corosync-qnetd.sock"
 #define QNETD_DEFAULT_LOCAL_SOCKET_BACKLOG		10
 #define QNETD_MIN_LOCAL_SOCKET_BACKLOG			1
 
