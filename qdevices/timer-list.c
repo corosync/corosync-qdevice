@@ -345,7 +345,7 @@ timer_list_add(struct timer_list *tlist, PRUint32 interval, timer_list_cb_fn fun
 }
 
 void
-timer_list_reschedule(struct timer_list *tlist, struct timer_list_entry *entry)
+timer_list_entry_reschedule(struct timer_list *tlist, struct timer_list_entry *entry)
 {
 
 	if (entry->is_active) {
@@ -377,7 +377,7 @@ timer_list_expire(struct timer_list *tlist)
 			/*
 			 * Move item to free list
 			 */
-			timer_list_delete(tlist, entry);
+			timer_list_entry_delete(tlist, entry);
 		} else if (entry->is_active) {
 			/*
 			 * Schedule again
@@ -422,7 +422,7 @@ timer_list_time_to_expire_ms(struct timer_list *tlist)
 }
 
 void
-timer_list_delete(struct timer_list *tlist, struct timer_list_entry *entry)
+timer_list_entry_delete(struct timer_list *tlist, struct timer_list_entry *entry)
 {
 
 	if (entry->is_active) {

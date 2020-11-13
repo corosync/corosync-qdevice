@@ -154,7 +154,7 @@ qdevice_heuristics_worker_cmd_process_exec(struct qdevice_heuristics_worker_inst
 	if (instance->exec_timeout_timer != NULL) {
 		process_list_move_active_entries_to_kill_list(&instance->main_process_list);
 
-		timer_list_delete(&instance->main_timer_list, instance->exec_timeout_timer);
+		timer_list_entry_delete(&instance->main_timer_list, instance->exec_timeout_timer);
 		instance->exec_timeout_timer = NULL;
 	}
 

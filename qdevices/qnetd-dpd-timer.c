@@ -92,7 +92,7 @@ qnetd_dpd_timer_destroy(struct qnetd_instance *instance)
 {
 
 	if (instance->dpd_timer != NULL) {
-		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), instance->dpd_timer);
+		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), instance->dpd_timer);
 		instance->dpd_timer = NULL;
 	}
 }

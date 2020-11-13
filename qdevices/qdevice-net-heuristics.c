@@ -362,7 +362,7 @@ qdevice_net_heuristics_stop_timer(struct qdevice_net_instance *net_instance)
 	if (net_instance->regular_heuristics_timer != NULL) {
 		log(LOG_DEBUG, "Regular heuristics timer stopped");
 
-		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
 		    net_instance->regular_heuristics_timer);
 		net_instance->regular_heuristics_timer = NULL;
 

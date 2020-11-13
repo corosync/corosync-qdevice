@@ -256,13 +256,13 @@ qdevice_model_net_post_poll_loop(struct qdevice_instance *instance,
 	ret_val = -1;
 
 	if (net_instance->connect_timer != NULL) {
-		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
 		    net_instance->connect_timer);
 		net_instance->connect_timer = NULL;
 	}
 
 	if (net_instance->echo_request_timer != NULL) {
-		timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
 		    net_instance->echo_request_timer);
 		net_instance->echo_request_timer = NULL;
 	}

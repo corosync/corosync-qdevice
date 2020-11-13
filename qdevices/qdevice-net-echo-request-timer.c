@@ -85,7 +85,7 @@ qdevice_net_echo_request_timer_schedule(struct qdevice_net_instance *instance)
 	instance->echo_reply_received_msg_seq_num = 0;
 
 	if (instance->echo_request_timer != NULL) {
-		timer_list_delete(
+		timer_list_entry_delete(
 		    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
 		    instance->echo_request_timer);
 		instance->echo_request_timer = NULL;

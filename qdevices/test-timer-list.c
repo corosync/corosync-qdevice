@@ -150,7 +150,7 @@ check_timer_list_basics(void)
 	/*
 	 * Delete entry
 	 */
-	timer_list_delete(&tlist, tlist_entry);
+	timer_list_entry_delete(&tlist, tlist_entry);
 	assert(timer_list_time_to_expire(&tlist) == PR_INTERVAL_NO_TIMEOUT);
 	assert(timer_list_time_to_expire_ms(&tlist) == ~((uint32_t)0));
 
@@ -166,7 +166,7 @@ check_timer_list_basics(void)
 	}
 
 	for (i = 0; i < SPEED_TEST_NO_ITEMS; i++) {
-		timer_list_reschedule(&tlist, tlist_speed_entry[i]);
+		timer_list_entry_reschedule(&tlist, tlist_speed_entry[i]);
 	}
 
 	(void)poll(NULL, 0, SHORT_TIMEOUT);
@@ -229,7 +229,7 @@ check_timer_heap(void)
 	 * Remove all items
 	 */
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
-		timer_list_delete(&tlist, tlist_entry[i]);
+		timer_list_entry_delete(&tlist, tlist_entry[i]);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 		assert(tlist.entries[0] == tlist_entry_small);
@@ -238,7 +238,7 @@ check_timer_heap(void)
 	/*
 	 * Remove small item
 	 */
-	timer_list_delete(&tlist, tlist_entry_small);
+	timer_list_entry_delete(&tlist, tlist_entry_small);
 	assert(timer_list_debug_is_valid_heap(&tlist));
 
 	/*
@@ -258,7 +258,7 @@ check_timer_heap(void)
 	 * Remove all items
 	 */
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
-		timer_list_delete(&tlist, tlist_entry[i]);
+		timer_list_entry_delete(&tlist, tlist_entry[i]);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 	}
@@ -286,7 +286,7 @@ check_timer_heap(void)
 	 * Remove items
 	 */
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
-		timer_list_delete(&tlist, tlist_entry[i]);
+		timer_list_entry_delete(&tlist, tlist_entry[i]);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 	}
@@ -320,7 +320,7 @@ check_timer_heap(void)
 	 * And try reschedule
 	 */
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
-		timer_list_reschedule(&tlist, tlist_entry[i]);
+		timer_list_entry_reschedule(&tlist, tlist_entry[i]);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 
@@ -330,11 +330,11 @@ check_timer_heap(void)
 	/*
 	 * Try delete
 	 */
-	timer_list_delete(&tlist, tlist_entry_small);
+	timer_list_entry_delete(&tlist, tlist_entry_small);
 	assert(timer_list_debug_is_valid_heap(&tlist));
 
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
-		timer_list_delete(&tlist, tlist_entry[i]);
+		timer_list_entry_delete(&tlist, tlist_entry[i]);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 	}
@@ -352,7 +352,7 @@ check_timer_heap(void)
 	}
 
 	for (i = 0; i < HEAP_SPEED_TEST_NO_ITEMS; i++) {
-		timer_list_reschedule(&tlist, tlist_speed_entry[i]);
+		timer_list_entry_reschedule(&tlist, tlist_speed_entry[i]);
 		assert(timer_list_debug_is_valid_heap(&tlist));
 	}
 

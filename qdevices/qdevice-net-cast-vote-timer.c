@@ -162,7 +162,7 @@ qdevice_net_cast_vote_timer_update(struct qdevice_net_instance *instance, enum t
 		}
 	} else {
 		if (instance->cast_vote_timer != NULL) {
-			timer_list_delete(
+			timer_list_entry_delete(
 			    pr_poll_loop_get_timer_list(&instance->qdevice_instance_ptr->main_poll_loop),
 			    instance->cast_vote_timer);
 			instance->cast_vote_timer = NULL;

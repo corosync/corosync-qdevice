@@ -523,7 +523,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 	assert(pr_poll_loop_exec(poll_loop) == -1);
 
 	assert(fd_set_events_cb1_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Remove entry and try with zero events and -2 return callback
@@ -540,7 +540,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 	assert(pr_poll_loop_exec(poll_loop) == -1);
 
 	assert(fd_set_events_cb1_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Remove entry and try different cb
@@ -559,7 +559,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(fd_set_events_cb1_return_called == 0);
 	assert(fd_set_events_cb2_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Delete entry and try timeout again
@@ -593,7 +593,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(fd_read_cb1_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Try timeout with valid entry
@@ -631,7 +631,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 	assert(fd_read_cb1_called == 0);
 	assert(fd_read_cb2_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Try writing
@@ -652,7 +652,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(fd_write_cb1_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Try err cb
@@ -678,7 +678,7 @@ test_fd_basics(struct pr_poll_loop *poll_loop)
 	assert(fd_write_cb1_called == 0);
 	assert(timeout_cb_called == 0);
 	assert(pr_poll_loop_del_fd(poll_loop, pipe_fd1[0]) == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 }
 
 static void
@@ -727,7 +727,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 	assert(pr_poll_loop_exec(poll_loop) == -1);
 
 	assert(prfd_set_events_cb1_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Remove entry and try different cb
@@ -746,7 +746,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(prfd_set_events_cb1_return_called == 0);
 	assert(prfd_set_events_cb2_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Delete entry and try timeout again
@@ -780,7 +780,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(prfd_read_cb1_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Try timeout with valid entry
@@ -818,7 +818,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 	assert(prfd_read_cb1_called == 0);
 	assert(prfd_read_cb2_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Try writing
@@ -839,7 +839,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 
 	assert(prfd_write_cb1_called == 1);
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	assert(PR_Close(read_pipe) == 0);
 	assert(PR_Close(write_pipe) == 0);
@@ -876,7 +876,7 @@ test_prfd_basics(struct pr_poll_loop *poll_loop)
 	assert(prfd_write_cb1_called == 0);
 	assert(timeout_cb_called == 0);
 	assert(pr_poll_loop_del_prfd(poll_loop, read_pipe) == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	assert(PR_DestroySocketPollFd(read_pipe) == PR_SUCCESS);
 }
@@ -955,7 +955,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 1);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Call for second time -> same as first time
@@ -977,7 +977,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 2);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Change state to prepare for writing
@@ -1000,7 +1000,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 3);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Write to first pipe
@@ -1024,7 +1024,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 4);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Delete pre poll cb
@@ -1052,7 +1052,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 5);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Add pre poll cb 1 and 2
@@ -1083,7 +1083,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 6);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Write to second pipe
@@ -1107,7 +1107,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 7);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * And call again
@@ -1129,7 +1129,7 @@ test_complex(struct pr_poll_loop *poll_loop)
 	assert(test_complex_write_pipe2_write_called == 8);
 
 	assert(timeout_cb_called == 0);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	assert(PR_DestroySocketPollFd(read_pipe1) == PR_SUCCESS);
 	assert(PR_DestroySocketPollFd(write_pipe2) == PR_SUCCESS);
@@ -1251,7 +1251,7 @@ test_pre_poll_cb(struct pr_poll_loop *poll_loop)
 	assert(pre_poll_cb1_called == 4);
 	assert(pre_poll_cb2_called == 3);
 	assert(pre_poll_cb_return_called == 1);
-	timer_list_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(poll_loop), timeout_timer);
 
 	/*
 	 * Remove cb_return

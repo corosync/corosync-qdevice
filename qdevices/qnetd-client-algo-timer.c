@@ -138,7 +138,7 @@ qnetd_client_algo_timer_abort(struct qnetd_client *client)
 {
 
 	if (qnetd_client_algo_timer_is_scheduled(client)) {
-		timer_list_delete(client->main_timer_list, client->algo_timer);
+		timer_list_entry_delete(client->main_timer_list, client->algo_timer);
 		client->algo_timer = NULL;
 	}
 

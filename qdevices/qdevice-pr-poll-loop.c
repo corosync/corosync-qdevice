@@ -83,7 +83,7 @@ qdevice_pr_poll_loop_wait_for_initial_heuristics_exec_result(struct qdevice_inst
 		return (-1);
 	}
 
-	timer_list_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), timeout_timer);
+	timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), timeout_timer);
 
 	return (poll_res);
 }
