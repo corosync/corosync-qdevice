@@ -461,3 +461,33 @@ timer_list_free(struct timer_list *tlist)
 
 	timer_list_init(tlist);
 }
+
+PRUint32
+timer_list_entry_get_interval(const struct timer_list_entry *entry)
+{
+
+	return (entry->interval);
+}
+
+int
+timer_list_entry_set_interval(struct timer_list *tlist, struct timer_list_entry *entry,
+    PRUint32 interval)
+{
+
+	if (interval < 1 || interval > TIMER_LIST_MAX_INTERVAL) {
+		return (-1);
+	}
+
+	if (!entry->is_active) {
+		return (-1);
+	}
+
+	timer_list_heap_delete(tlist, entry);
+
+	entry->interval = interval;
+	entry->epoch = PR_IntervalNow();
+
+	timer_list_insert_into_list(tlist, entry);
+
+	return (0);
+}

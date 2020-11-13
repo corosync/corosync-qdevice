@@ -155,6 +155,19 @@ check_timer_list_basics(void)
 	assert(timer_list_time_to_expire_ms(&tlist) == ~((uint32_t)0));
 
 	/*
+	 * Check changing of interval
+	 */
+	timer_list_fn1_called = 0;
+	tlist_entry = timer_list_add(&tlist, LONG_TIMEOUT, timer_list_fn1, &timer_list_fn1_called, timer_list_fn1);
+	assert(tlist_entry != NULL);
+	assert(timer_list_entry_set_interval(&tlist, tlist_entry, SHORT_TIMEOUT) == 0);
+	(void)poll(NULL, 0, SHORT_TIMEOUT);
+	assert(timer_list_time_to_expire(&tlist) == 0);
+	assert(timer_list_time_to_expire_ms(&tlist) == 0);
+	timer_list_expire(&tlist);
+	assert(timer_list_fn1_called == 1);
+
+	/*
 	 * Test speed and more entries
 	 */
 	timer_list_fn1_called = 0;
@@ -224,6 +237,7 @@ check_timer_heap(void)
 	assert(timer_list_debug_is_valid_heap(&tlist));
 	assert(tlist.size == i + 1);
 	assert(tlist.entries[0] == tlist_entry_small);
+	assert(timer_list_entry_get_interval(tlist_entry_small) == SHORT_TIMEOUT);
 
 	/*
 	 * Remove all items
@@ -233,6 +247,7 @@ check_timer_heap(void)
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
 		assert(tlist.entries[0] == tlist_entry_small);
+		assert(timer_list_entry_get_interval(tlist_entry[i]) == LONG_TIMEOUT * (i + 1));
 	}
 
 	/*

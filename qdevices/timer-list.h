@@ -94,6 +94,12 @@ extern void				 timer_list_free(struct timer_list *tlist);
 
 extern int				 timer_list_debug_is_valid_heap(struct timer_list *tlist);
 
+extern PRUint32				 timer_list_entry_get_interval(
+    const struct timer_list_entry *entry);
+
+extern int				 timer_list_entry_set_interval(
+    struct timer_list *tlist, struct timer_list_entry *entry, PRUint32 interval);
+
 #ifdef __cplusplus
 }
 #endif
