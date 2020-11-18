@@ -40,6 +40,7 @@
 #include "qnetd-instance.h"
 #include "qnetd-log-debug.h"
 #include "qnetd-client-send.h"
+#include "qnetd-client-dpd-timer.h"
 #include "msg.h"
 #include "nss-sock.h"
 
@@ -368,6 +369,10 @@ qnetd_client_msg_received_init(struct qnetd_instance *instance, struct qnetd_cli
 			reply_error_code = TLV_REPLY_ERROR_CODE_INVALID_HEARTBEAT_INTERVAL;
 		} else {
 			client->heartbeat_interval = msg->heartbeat_interval;
+
+			if (qnetd_client_dpd_timer_update_interval(instance, client) != 0) {
+				reply_error_code = TLV_REPLY_ERROR_CODE_INVALID_HEARTBEAT_INTERVAL;
+			}
 		}
 	}
 
@@ -569,6 +574,15 @@ qnetd_client_msg_received_set_option(struct qnetd_instance *instance, struct qne
 		}
 
 		client->heartbeat_interval = msg->heartbeat_interval;
+
+		if (qnetd_client_dpd_timer_update_interval(instance, client) != 0) {
+			if (qnetd_client_send_err(client, msg->seq_number_set, msg->seq_number,
+			    TLV_REPLY_ERROR_CODE_INVALID_HEARTBEAT_INTERVAL) != 0) {
+				return (-1);
+			}
+
+			return (0);
+		}
 	}
 
 	if (msg->keep_active_partition_tie_breaker_set) {
@@ -1148,7 +1162,7 @@ qnetd_client_msg_received(struct qnetd_instance *instance, struct qnetd_client *
 	int ret_val;
 	int msg_processed;
 
-	client->dpd_msg_received_since_last_check = 1;
+	qnetd_client_dpd_timer_reschedule(instance, client);
 
 	msg_decoded_init(&msg);
 

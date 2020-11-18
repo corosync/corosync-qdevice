@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 Red Hat, Inc.
+ * Copyright (c) 2015-2020 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -32,8 +32,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _QNETD_DPD_TIMER_H_
-#define _QNETD_DPD_TIMER_H_
+#ifndef _QNETD_CLIENT_DPD_TIMER_H_
+#define _QNETD_CLIENT_DPD_TIMER_H_
 
 #include "qnetd-instance.h"
 
@@ -41,12 +41,20 @@
 extern "C" {
 #endif
 
-extern int		qnetd_dpd_timer_init(struct qnetd_instance *instance);
+extern int		qnetd_client_dpd_timer_init(struct qnetd_instance *instance,
+    struct qnetd_client *client);
 
-extern void		qnetd_dpd_timer_destroy(struct qnetd_instance *instance);
+extern void		qnetd_client_dpd_timer_destroy(struct qnetd_instance *instance,
+     struct qnetd_client *client);
+
+extern void		qnetd_client_dpd_timer_reschedule(struct qnetd_instance *instance,
+    struct qnetd_client *client);
+
+extern int		qnetd_client_dpd_timer_update_interval(struct qnetd_instance *instance,
+    struct qnetd_client *client);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _QNETD_DPD_TIMER_H_ */
+#endif /* _QNETD_CLIENT_DPD_TIMER_H_ */

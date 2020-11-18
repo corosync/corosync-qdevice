@@ -64,7 +64,7 @@ corosync_qnetd_SOURCES	= corosync-qnetd.c \
                           qnetd-client-msg-received.c qnetd-client-msg-received.h \
                           qnetd-log-debug.c qnetd-log-debug.h \
                           qnetd-client-algo-timer.c qnetd-client-algo-timer.h \
-                          qnetd-dpd-timer.c qnetd-dpd-timer.h \
+                          qnetd-client-dpd-timer.c qnetd-client-dpd-timer.h \
                           qnetd-ipc.c qnetd-ipc.h unix-socket-ipc.c unix-socket-ipc.h \
                           dynar-simple-lex.c dynar-simple-lex.h dynar-str.c dynar-str.h \
                           unix-socket-client.c unix-socket-client.h \

@@ -56,6 +56,10 @@ qnetd_client_init(struct qnetd_client *client, PRFileDesc *sock, PRNetAddr *addr
 	node_list_init(&client->last_membership_node_list);
 	node_list_init(&client->last_quorum_node_list);
 	client->main_timer_list = main_timer_list;
+	/*
+	 * Set max heartbeat interval before client sends init msg
+	 */
+	client->heartbeat_interval = QNETD_DEFAULT_HEARTBEAT_INTERVAL_MAX;
 }
 
 void

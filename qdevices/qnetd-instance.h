@@ -67,7 +67,6 @@ struct qnetd_instance {
 	int tls_client_cert_required;
 	const char *host_addr;
 	uint16_t host_port;
-	struct timer_list_entry *dpd_timer;		/* Dead peer detection timer */
 	struct unix_socket_ipc local_ipc;
 	const struct qnetd_advanced_settings *advanced_settings;
 	struct pr_poll_loop main_poll_loop;

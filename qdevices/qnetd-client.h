@@ -83,8 +83,7 @@ struct qnetd_client {
 	struct timer_list_entry *algo_timer;
 	uint32_t algo_timer_vote_info_msq_seq_number;
 	int schedule_disconnect;
-	uint32_t dpd_time_since_last_check;
-	uint32_t dpd_msg_received_since_last_check;
+	struct timer_list_entry *dpd_timer;
 	enum tlv_vote last_sent_vote;
 	enum tlv_vote last_sent_ack_nack_vote;
 	enum tlv_heuristics last_membership_heuristics; /* Passed in membership node list */

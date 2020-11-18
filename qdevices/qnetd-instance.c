@@ -37,9 +37,9 @@
 #include <pk11func.h>
 #include "qnetd-instance.h"
 #include "qnetd-client.h"
+#include "qnetd-client-dpd-timer.h"
 #include "qnetd-algorithm.h"
 #include "qnetd-log-debug.h"
-#include "qnetd-dpd-timer.h"
 #include "qnetd-client-algo-timer.h"
 
 int
@@ -62,10 +62,6 @@ qnetd_instance_init(struct qnetd_instance *instance,
 
 	pr_poll_loop_init(&instance->main_poll_loop);
 
-	if (qnetd_dpd_timer_init(instance) != 0) {
-		return (0);
-	}
-
 	return (0);
 }
 
@@ -74,8 +70,6 @@ qnetd_instance_destroy(struct qnetd_instance *instance)
 {
 	struct qnetd_client *client;
 	struct qnetd_client *client_next;
-
-	qnetd_dpd_timer_destroy(instance);
 
 	client = TAILQ_FIRST(&instance->clients);
 	while (client != NULL) {
@@ -104,6 +98,8 @@ qnetd_instance_client_disconnect(struct qnetd_instance *instance, struct qnetd_c
 	if (client->init_received) {
 		qnetd_algorithm_client_disconnect(client, server_going_down);
 	}
+
+	qnetd_client_dpd_timer_destroy(instance, client);
 
 	PR_Close(client->socket);
 	if (client->cluster != NULL) {

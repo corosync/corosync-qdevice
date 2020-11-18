@@ -63,7 +63,7 @@ qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings)
 	settings->heartbeat_interval_min = QNETD_DEFAULT_HEARTBEAT_INTERVAL_MIN;
 	settings->heartbeat_interval_max = QNETD_DEFAULT_HEARTBEAT_INTERVAL_MAX;
 	settings->dpd_enabled = QNETD_DEFAULT_DPD_ENABLED;
-	settings->dpd_interval = QNETD_DEFAULT_DPD_INTERVAL;
+	settings->dpd_interval_coefficient = QNETD_DEFAULT_DPD_INTERVAL_COEFFICIENT;
 	if ((settings->lock_file = strdup(QNETD_DEFAULT_LOCK_FILE)) == NULL) {
 		return (-1);
 	}
@@ -94,12 +94,14 @@ qnetd_advanced_settings_destroy(struct qnetd_advanced_settings *settings)
  * 0 - No error
  * -1 - Unknown option
  * -2 - Incorrect value
+ * -3 - Deprecated value
  */
 int
 qnetd_advanced_settings_set(struct qnetd_advanced_settings *settings,
     const char *option, const char *value)
 {
 	long long int tmpll;
+	double tmpdbl;
 
 	if (strcasecmp(option, "listen_backlog") == 0) {
 		if (utils_strtonum(value, QNETD_MIN_LISTEN_BACKLOG, INT_MAX, &tmpll) == -1) {
@@ -156,11 +158,14 @@ qnetd_advanced_settings_set(struct qnetd_advanced_settings *settings,
 
 		settings->dpd_enabled = (uint8_t)tmpll;
 	} else if (strcasecmp(option, "dpd_interval") == 0) {
-		if (utils_strtonum(value, QNETD_MIN_DPD_INTERVAL, UINT32_MAX, &tmpll) == -1) {
+		return (-3);
+	} else if (strcasecmp(option, "dpd_interval_coefficient") == 0) {
+		if (utils_strtod(value, QNETD_MIN_DPD_INTERVAL_COEFFICIENT,
+		    QNETD_MAX_DPD_INTERVAL_COEFFICIENT, &tmpdbl) == -1) {
 			return (-2);
 		}
 
-		settings->dpd_interval = (uint32_t)tmpll;
+		settings->dpd_interval_coefficient = tmpdbl;
 	} else if (strcasecmp(option, "lock_file") == 0) {
 		free(settings->lock_file);
 

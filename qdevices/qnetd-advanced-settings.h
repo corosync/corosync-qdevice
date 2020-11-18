@@ -49,7 +49,6 @@ struct qnetd_advanced_settings {
 	uint32_t heartbeat_interval_min;
 	uint32_t heartbeat_interval_max;
 	uint8_t dpd_enabled;
-	uint32_t dpd_interval;
 	char *lock_file;
 	char *local_socket_file;
 	int local_socket_backlog;
@@ -57,6 +56,7 @@ struct qnetd_advanced_settings {
 	size_t ipc_max_send_size;
 	size_t ipc_max_receive_size;
 	enum tlv_keep_active_partition_tie_breaker keep_active_partition_tie_breaker;
+	double dpd_interval_coefficient;
 };
 
 extern int		qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings);

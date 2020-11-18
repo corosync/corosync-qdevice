@@ -237,6 +237,9 @@ cli_parse_long_opt(struct qnetd_advanced_settings *advanced_settings, const char
 		case -2:
 			errx(EXIT_FAILURE, "Invalid value '%s' for option '%s'", val, opt);
 			break;
+		case -3:
+			warnx("Option '%s' is deprecated and has no effect anymore", opt);
+			break;
 		}
 	}
 

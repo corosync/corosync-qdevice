@@ -38,6 +38,7 @@
 #include "msgio.h"
 #include "msg.h"
 #include "nss-sock.h"
+#include "qnetd-client-dpd-timer.h"
 #include "qnetd-client-net.h"
 #include "qnetd-client-send.h"
 #include "qnetd-client-msg-received.h"
@@ -322,10 +323,28 @@ qnetd_client_net_accept(struct qnetd_instance *instance)
 	    instance, client) == -1) {
 		log(LOG_ERR, "Can't add client to main poll loop");
 		res_err = -2;
-		goto exit_close;
+		goto exit_client_list_del_close;
+	}
+
+	if (qnetd_client_dpd_timer_init(instance, client) == -1) {
+		res_err = -2;
+		goto exit_client_nspr_list_del_close;
 	}
 
 	return (0);
+
+exit_client_nspr_list_del_close:
+	if (pr_poll_loop_del_prfd(&instance->main_poll_loop, client_socket) == -1) {
+		log(LOG_ERR, "pr_poll_loop_del_prfd for client socket failed");
+	}
+
+exit_client_list_del_close:
+	qnetd_client_list_del(&instance->clients, client);
+	/*
+	 * client_addr_str is passed to qnetd_client_list_add and becomes part of client struct.
+	 * qnetd_client_list_del calls qnetd_client_destroy which frees this memory
+	 */
+	client_addr_str = NULL;
 
 exit_close:
 	free(client_addr_str);

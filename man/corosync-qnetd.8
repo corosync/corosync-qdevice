@@ -31,7 +31,7 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QNETD 8 2020-09-22
+.TH COROSYNC-QNETD 8 2020-11-18
 .SH NAME
 corosync-qnetd \- QNet daemon
 .SH SYNOPSIS
@@ -216,8 +216,9 @@ Maximum heartbeat timeout accepted by server in ms. (120000)
 .B dpd_enabled
 Dead peer detection enabled. (on)
 .TP
-.B dpd_interval
-How often the DPD algorithm detects dead peers in ms. (1000)
+.B dpd_interval_coefficient
+Value is multiplied with heartbeat interval sent by qdevice client and used as a timeout
+for dead peer detection. (1.5)
 .TP
 .B lock_file
 Lock file location. (/var/run/corosync-qnetd/corosync-qnetd.pid)

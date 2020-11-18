@@ -33,53 +33,42 @@
  */
 
 #include "log.h"
-#include "qnetd-dpd-timer.h"
+#include "qnetd-client-dpd-timer.h"
 
 static int
 qnetd_dpd_timer_cb(void *data1, void *data2)
 {
-	struct qnetd_instance *instance;
 	struct qnetd_client *client;
 
-	instance = (struct qnetd_instance *)data1;
+	client = (struct qnetd_client *)data1;
 
-	TAILQ_FOREACH(client, &instance->clients, entries) {
-		if (!client->init_received) {
-			continue;
-		}
+	log(LOG_WARNING, "Client %s doesn't sent any message during "
+	    "%" PRIu32 "ms. Disconnecting",
+	    client->addr_str,
+	    timer_list_entry_get_interval(client->dpd_timer));
 
-		client->dpd_time_since_last_check += instance->advanced_settings->dpd_interval;
+	client->schedule_disconnect = 1;
+	/*
+	 * Timer gets removed by timer-list because of returning 0
+	 */
+	client->dpd_timer = NULL;
 
-		if (client->dpd_time_since_last_check > client->heartbeat_interval * 1.2) {
-			if (!client->dpd_msg_received_since_last_check) {
-				log(LOG_WARNING, "Client %s doesn't sent any message during "
-				    "%"PRIu32"ms. Disconnecting",
-				    client->addr_str, client->dpd_time_since_last_check);
-
-				client->schedule_disconnect = 1;
-			} else {
-				client->dpd_time_since_last_check = 0;
-				client->dpd_msg_received_since_last_check = 0;
-			}
-		}
-	}
-
-	return (-1);
+	return (0);
 }
 
 int
-qnetd_dpd_timer_init(struct qnetd_instance *instance)
+qnetd_client_dpd_timer_init(struct qnetd_instance *instance, struct qnetd_client *client)
 {
 
 	if (!instance->advanced_settings->dpd_enabled) {
 		return (0);
 	}
 
-	instance->dpd_timer = timer_list_add(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
-	    instance->advanced_settings->dpd_interval,
-	    qnetd_dpd_timer_cb, (void *)instance, NULL);
-	if (instance->dpd_timer == NULL) {
-		log(LOG_ERR, "Can't initialize dpd timer");
+	client->dpd_timer = timer_list_add(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+	    (PRUint32)(instance->advanced_settings->dpd_interval_coefficient * client->heartbeat_interval),
+	    qnetd_dpd_timer_cb, (void *)client, NULL);
+	if (client->dpd_timer == NULL) {
+		log(LOG_ERR, "Can't initialize dpd timer for client %s", client->addr_str);
 
 		return (-1);
 	}
@@ -88,11 +77,39 @@ qnetd_dpd_timer_init(struct qnetd_instance *instance)
 }
 
 void
-qnetd_dpd_timer_destroy(struct qnetd_instance *instance)
+qnetd_client_dpd_timer_destroy(struct qnetd_instance *instance, struct qnetd_client *client)
 {
 
-	if (instance->dpd_timer != NULL) {
-		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop), instance->dpd_timer);
-		instance->dpd_timer = NULL;
+	if (client->dpd_timer != NULL) {
+		timer_list_entry_delete(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		    client->dpd_timer);
+
+		client->dpd_timer = NULL;
 	}
+}
+
+void
+qnetd_client_dpd_timer_reschedule(struct qnetd_instance *instance, struct qnetd_client *client)
+{
+
+	if (client->dpd_timer != NULL) {
+		timer_list_entry_reschedule(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+		    client->dpd_timer);
+	}
+}
+
+int
+qnetd_client_dpd_timer_update_interval(struct qnetd_instance *instance, struct qnetd_client *client)
+{
+	int res;
+
+	if (client->dpd_timer == NULL) {
+		return (0);
+	}
+
+	res = timer_list_entry_set_interval(pr_poll_loop_get_timer_list(&instance->main_poll_loop),
+	    client->dpd_timer,
+	    (PRUint32)(instance->advanced_settings->dpd_interval_coefficient * client->heartbeat_interval));
+
+	return (res);
 }
