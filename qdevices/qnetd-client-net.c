@@ -61,18 +61,18 @@ static int
 qnetd_client_net_socket_poll_loop_set_events_cb(PRFileDesc *prfd, short *events,
     void *user_data1, void *user_data2)
 {
-	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
 	struct qnetd_client *client = (struct qnetd_client *)user_data2;
 
 	if (client->schedule_disconnect) {
-		qnetd_instance_client_disconnect(instance, client, 0);
-
-		if (pr_poll_loop_del_prfd(&instance->main_poll_loop, prfd) == -1) {
-			log(LOG_ERR, "pr_poll_loop_del_prfd for client socket failed");
-
-			return (-2);
-		}
-
+		/*
+		 * Disconnect logic used to be there but it was moved to
+		 * qnetd-instance.c (see qnetd_instance_poll_loop_pre_poll_cb
+		 * function for reasoning).
+		 *
+		 * This condition (= set_events_cb and client scheduled for disconnect)
+		 * shouldn't really happen, but if it happens just don't add client to
+		 * pr loop and wait for next pre_poll_cb.
+		 */
 		return (-1);
 	}
 

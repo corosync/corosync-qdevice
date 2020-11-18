@@ -35,12 +35,52 @@
 #include <sys/types.h>
 
 #include <pk11func.h>
+#include "log.h"
 #include "qnetd-instance.h"
 #include "qnetd-client.h"
 #include "qnetd-client-dpd-timer.h"
 #include "qnetd-algorithm.h"
 #include "qnetd-log-debug.h"
 #include "qnetd-client-algo-timer.h"
+
+static int
+qnetd_instance_poll_loop_pre_poll_cb(void *user_data1, void *user_data2)
+{
+	struct qnetd_instance *instance = (struct qnetd_instance *)user_data1;
+	struct qnetd_client *client;
+	struct qnetd_client *client_next;
+
+	/*
+	 * This functionality used to be per client fd in
+	 * the qnetd_client_net_socket_poll_loop_set_events_cb. Problem is, that
+	 * disconnect calls algorithm which may send message to other client
+	 * with fd which was already processed in the pr-poll-loop so POLLOUT is
+	 * not set till new loop exec is called (and that usually happens
+	 * because old one timeouts). To reproduce this problem use
+	 * ffsplit and make qnetd disconnect one of the clients - ffsplit needs to
+	 * send ack/nack votes, but it doesn't send them during first iteration
+	 * and waits for dpd timeout.
+	 */
+	client = TAILQ_FIRST(&instance->clients);
+	while (client != NULL) {
+		client_next = TAILQ_NEXT(client, entries);
+
+		if (client->schedule_disconnect) {
+			if (pr_poll_loop_del_prfd(&instance->main_poll_loop,
+			    client->socket) == -1) {
+				log(LOG_ERR, "pr_poll_loop_del_prfd for client socket failed");
+
+				return (-1);
+			}
+
+			qnetd_instance_client_disconnect(instance, client, 0);
+		}
+
+		client = client_next;
+	}
+
+	return (0);
+}
 
 int
 qnetd_instance_init(struct qnetd_instance *instance,
@@ -62,6 +102,14 @@ qnetd_instance_init(struct qnetd_instance *instance,
 
 	pr_poll_loop_init(&instance->main_poll_loop);
 
+	if (pr_poll_loop_add_pre_poll_cb(&instance->main_poll_loop,
+	    qnetd_instance_poll_loop_pre_poll_cb,
+	    instance, NULL) == -1) {
+		log(LOG_ERR, "Can't add instance pre poll loop cb");
+
+		return (-1);
+	}
+
 	return (0);
 }
 
@@ -82,6 +130,11 @@ qnetd_instance_destroy(struct qnetd_instance *instance)
 
 	qnetd_cluster_list_free(&instance->clusters);
 	qnetd_client_list_free(&instance->clients);
+
+	if (pr_poll_loop_del_pre_poll_cb(&instance->main_poll_loop,
+	    qnetd_instance_poll_loop_pre_poll_cb) == -1) {
+		log(LOG_WARNING, "Can't delete instance pre poll loop cb");
+	}
 
 	pr_poll_loop_destroy(&instance->main_poll_loop);
 
