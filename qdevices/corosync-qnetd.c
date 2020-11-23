@@ -289,11 +289,7 @@ cli_parse(int argc, char * const argv[], char **host_addr, uint16_t *host_port, 
 			}
 			break;
 		case 'l':
-			free(*host_addr);
-			*host_addr = strdup(optarg);
-			if (*host_addr == NULL) {
-				errx(EXIT_FAILURE, "Can't alloc memory for host addr string");
-			}
+			*host_addr = optarg;
 			break;
 		case 'm':
 			if (utils_strtonum(optarg, 0, LLONG_MAX, &tmpll) == -1) {
