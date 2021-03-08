@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Red Hat, Inc.
+ * Copyright (c) 2020-2021 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -351,6 +351,42 @@ check_timer_heap(void)
 	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
 		timer_list_entry_delete(&tlist, tlist_entry[i]);
 
+		assert(timer_list_debug_is_valid_heap(&tlist));
+	}
+
+	assert(tlist.size == 0);
+
+	/*
+	 * Add items again in increasing order
+	 */
+	for (i = 0; i < HEAP_TEST_NO_ITEMS; i++) {
+		tlist_entry[i] = timer_list_add(&tlist, LONG_TIMEOUT * (i + 1),
+		    timer_list_fn1, NULL, NULL);
+
+		assert(tlist_entry[i] != NULL);
+		assert(tlist.size == i + 1);
+
+		assert(timer_list_debug_is_valid_heap(&tlist));
+
+		for (j = 0; j < i + 1; j++) {
+			assert(tlist.entries[j] == tlist_entry[j]);
+		}
+	}
+
+
+	/*
+	 * Try delete every third item and test if heap property is kept
+	 */
+	i = 0;
+	while (tlist.size > 0) {
+		i = (i + 3) % HEAP_TEST_NO_ITEMS;
+
+		while (tlist_entry[i] == NULL) {
+			i = (i + 1) % HEAP_TEST_NO_ITEMS;
+		}
+
+		timer_list_entry_delete(&tlist, tlist_entry[i]);
+		tlist_entry[i] = NULL;
 		assert(timer_list_debug_is_valid_heap(&tlist));
 	}
 
