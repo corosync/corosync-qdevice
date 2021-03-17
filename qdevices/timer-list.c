@@ -180,7 +180,7 @@ timer_list_heap_sift_down(struct timer_list *tlist, size_t item_pos)
 
 		if (smallest_pos == item_pos) {
 			/*
-			 * Item is smallest (or has no childs) -> heap property is restored
+			 * Item is smallest (or has no children) -> heap property is restored
 			 */
 			cont = 0;
 		} else {
