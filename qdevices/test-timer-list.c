@@ -285,13 +285,13 @@ check_timer_heap(void)
 		tlist_entry[i * 2] = timer_list_add(&tlist, LONG_TIMEOUT * ((HEAP_TEST_NO_ITEMS - i) + 1),
 		    timer_list_fn1, NULL, NULL);
 
-		assert(tlist_entry[i] != NULL);
+		assert(tlist_entry[i * 2 + 1] != NULL);
 		assert(tlist.size == (i * 2) + 1);
 
 		tlist_entry[i * 2 + 1] = timer_list_add(&tlist, LONG_TIMEOUT * (i + 1),
 		    timer_list_fn1, NULL, NULL);
 
-		assert(tlist_entry[i] != NULL);
+		assert(tlist_entry[i * 2 + 1] != NULL);
 		assert(tlist.size == (i * 2) + 2);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
@@ -315,13 +315,13 @@ check_timer_heap(void)
 		tlist_entry[i * 2] = timer_list_add(&tlist, LONG_TIMEOUT * ((HEAP_TEST_NO_ITEMS - i) + 1),
 		    timer_list_fn1, NULL, NULL);
 
-		assert(tlist_entry[i] != NULL);
+		assert(tlist_entry[i * 2] != NULL);
 		assert(tlist.size == (i * 2) + 1);
 
 		tlist_entry[i * 2 + 1] = timer_list_add(&tlist, LONG_TIMEOUT * (i + 1),
 		    timer_list_fn1, NULL, NULL);
 
-		assert(tlist_entry[i] != NULL);
+		assert(tlist_entry[i * 2 + 1] != NULL);
 		assert(tlist.size == (i * 2) + 2);
 
 		assert(timer_list_debug_is_valid_heap(&tlist));
