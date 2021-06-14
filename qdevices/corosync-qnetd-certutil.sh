@@ -46,6 +46,7 @@ PWD_FILE="$DB_DIR/pwdfile.txt"
 NOISE_FILE="$DB_DIR/noise.txt"
 SERIAL_NO_FILE="$DB_DIR/serial.txt"
 CA_EXPORT_FILE="$DB_DIR/qnetd-cacert.crt"
+CA_EXTERNAL_CRQ_FILE="$DB_DIR/qnetd-external-cacert.crq"
 CERTDB_FILES=("cert9.db key4.db pkcs11.txt"
               "cert8.db key3.db secmod.db")
 
@@ -54,9 +55,10 @@ usage() {
     echo
     echo " -i                  Initialize QNetd CA and generate server certificate"
     echo " -s                  Sign cluster certificate (needs cluster certificate)"
-    echo " -c certificate      CRQ certificate file name"
+    echo " -c certificate      Ether CRQ or CRT certificate (operation dependant)"
     echo " -G                  Do not set group write bit for new files"
     echo " -n cluster_name     Name of cluster (for -s operation)"
+    echo " -t ca_type          Type of CA. Can be self-signed (default) or external"
 
     exit 0
 }
@@ -122,44 +124,86 @@ find_certdb_files() {
 
 init_qnetd_ca() {
     cert_files=`find_certdb_files`
-    if [ "$cert_files" != "" ];then
-        echo "Certificate database ($DB_DIR) already exists. Delete it to initialize new db" >&2
 
-        exit 1
+    if [ "$CERTIFICATE_FILE" == "" ];then
+        # Self-signed CA certificate or step 1 of external CS
+        if [ "$cert_files" != "" ];then
+            echo "Certificate database ($DB_DIR) already exists. Delete it to initialize new db" >&2
+
+            exit 1
+        fi
+
+        if [ "$CA_TYPE" == "" ];then
+            CA_TYPE="self-signed"
+        fi
+
+        if [ "$CA_TYPE" != "self-signed" ] && [ "$CA_TYPE" != "external" ];then
+            echo "Unknown type of CA \"$CA_TYPE\". Can be one of self-signed or external" >&2
+
+            exit 1
+        fi
+
+        if ! [ -d "$DB_DIR" ];then
+            echo "Creating $DB_DIR"
+            mkdir -p "$DB_DIR"
+            chown_ref_cfgdir "$DB_DIR"
+            chmod "$(get_perm true)" "$DB_DIR"
+        fi
+
+        echo "Creating new key and cert db"
+        echo -n "" > "$PWD_FILE"
+        chown_ref_cfgdir "$PWD_FILE"
+        chmod "$(get_perm)" "$PWD_FILE"
+
+        certutil -N -d "$DB_DIR" -f "$PWD_FILE"
+        cert_files=`find_certdb_files`
+        if [ "$cert_files" == "" ];then
+            echo "Can't find certificate database files. Certificate database ($DB_DIR) cannot be created" >&2
+
+            exit 1
+        fi
+
+        for fname in $cert_files;do
+            chown_ref_cfgdir "$DB_DIR/$fname"
+            chmod "$(get_perm)" "$DB_DIR/$fname"
+        done
+
+        create_new_noise_file "$NOISE_FILE"
+
+        if [ "$CA_TYPE" == "self-signed" ];then
+            echo "Creating new CA"
+            # Create self-signed certificate (CA). Asks 3 questions (is this CA, lifetime and critical extension
+            echo -e "y\n0\ny\n" | certutil -S -n "$CA_NICKNAME" -s "$CA_SUBJECT" -x \
+                -t "CT,," -m "$(get_serial_no)" -v $CRT_VALIDITY -d "$DB_DIR" \
+                -z "$NOISE_FILE" -f "$PWD_FILE" -2
+        else
+            echo "Creating new CA request"
+            echo -e "y\n0\ny\n" | certutil -R -s "$CA_SUBJECT" -o "$CA_EXTERNAL_CRQ_FILE" \
+                -d "$DB_DIR" -f "$PWD_FILE" -z "$NOISE_FILE" -2
+
+            echo "CA Certificate request stored in $CA_EXTERNAL_CRQ_FILE." \
+                "The next step is to get $CA_EXTERNAL_CRQ_FILE signed by your CA and re-run $0 as:" \
+                "$0 -i -c /path/to/signed_certificate"
+
+            exit 0
+        fi
+    else
+        # Step 2 of external CA
+        if [ "$cert_files" == "" ];then
+            echo "Certificate database doesn't exists. Use $0 -i to create it" >&2
+
+            exit 1
+        fi
+
+        if certutil -d "$DB_DIR" -L -n "$CA_NICKNAME" &>/dev/null;then
+            echo "Certificate database already contains QNetd CA certificate. Delete it to initialize new db" >&2
+
+            exit 1
+        fi
+
+        certutil -d "$DB_DIR" -A -t "CT," -n "$CA_NICKNAME" -i "$CERTIFICATE_FILE"
     fi
 
-    if ! [ -d "$DB_DIR" ];then
-        echo "Creating $DB_DIR"
-        mkdir -p "$DB_DIR"
-        chown_ref_cfgdir "$DB_DIR"
-        chmod "$(get_perm true)" "$DB_DIR"
-    fi
-
-    echo "Creating new key and cert db"
-    echo -n "" > "$PWD_FILE"
-    chown_ref_cfgdir "$PWD_FILE"
-    chmod "$(get_perm)" "$PWD_FILE"
-
-    certutil -N -d "$DB_DIR" -f "$PWD_FILE"
-    cert_files=`find_certdb_files`
-    if [ "$cert_files" == "" ];then
-        echo "Can't find certificate database files. Certificate database ($DB_DIR) cannot be created" >&2
-
-        exit 1
-    fi
-
-    for fname in $cert_files;do
-        chown_ref_cfgdir "$DB_DIR/$fname"
-        chmod "$(get_perm)" "$DB_DIR/$fname"
-    done
-
-    create_new_noise_file "$NOISE_FILE"
-
-    echo "Creating new CA"
-    # Create self-signed certificate (CA). Asks 3 questions (is this CA, lifetime and critical extension
-    echo -e "y\n0\ny\n" | certutil -S -n "$CA_NICKNAME" -s "$CA_SUBJECT" -x \
-        -t "CT,," -m "$(get_serial_no)" -v $CRT_VALIDITY -d "$DB_DIR" \
-        -z "$NOISE_FILE" -f "$PWD_FILE" -2
     # Export CA certificate in ascii
     certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" > "$CA_EXPORT_FILE"
     certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" -a >> "$CA_EXPORT_FILE"
@@ -192,8 +236,9 @@ OPERATION=""
 CERTIFICATE_FILE=""
 CLUSTER_NAME=""
 SET_GROUP_WRITE_BIT=true
+CA_TYPE=""
 
-while getopts ":Ghisc:n:" opt; do
+while getopts ":Ghisc:n:t:" opt; do
     case $opt in
         i)
             OPERATION=init_qnetd_ca
@@ -212,6 +257,9 @@ while getopts ":Ghisc:n:" opt; do
             ;;
         n)
             CLUSTER_NAME="$OPTARG"
+            ;;
+        t)
+            CA_TYPE="$OPTARG"
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -232,6 +280,12 @@ CRT_FILE="$DB_DIR/cluster-$CLUSTER_NAME.crt"
 
 case "$OPERATION" in
     "init_qnetd_ca")
+        if [ "$CERTIFICATE_FILE" != "" ] && ! [ -e "$CERTIFICATE_FILE" ];then
+            echo "Can't open certificate file $CERTIFICATE_FILE" >&2
+
+            exit 2
+        fi
+
         init_qnetd_ca
     ;;
     "sign_cluster_cert")
