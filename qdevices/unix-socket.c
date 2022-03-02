@@ -48,7 +48,7 @@ unix_socket_server_create(const char *path, int non_blocking, int backlog)
 	int s;
 	struct sockaddr_un sun;
 
-	if (strlen(path) >= sizeof(sun.sun_path)) {
+	if (strlen(path) >= sizeof(sun.sun_path) || strlen(path) == 0) {
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
@@ -91,7 +91,7 @@ unix_socket_client_create(const char *path, int non_blocking)
 	int s;
 	struct sockaddr_un sun;
 
-	if (strlen(path) >= sizeof(sun.sun_path)) {
+	if (strlen(path) >= sizeof(sun.sun_path) || strlen(path) == 0) {
 		errno = ENAMETOOLONG;
 		return (-1);
 	}
