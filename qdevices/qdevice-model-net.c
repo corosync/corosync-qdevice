@@ -211,6 +211,10 @@ qdevice_model_net_pre_poll_loop(struct qdevice_instance *instance)
 	res = nss_sock_non_blocking_client_try_next(&net_instance->non_blocking_client);
 	if (res == -1) {
 		log_nss(LOG_ERR, "Can't connect to qnetd host");
+		/*
+		 * To prevent adding non_blocking_client into loop but still keep loop running
+		 */
+		nss_sock_non_blocking_client_destroy(&net_instance->non_blocking_client);
 	}
 
 	res = qdevice_net_socket_add_to_main_poll_loop(net_instance);
