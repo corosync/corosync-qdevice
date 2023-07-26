@@ -130,6 +130,11 @@ if INSTALL_SYSTEMD
 else
 	sed -i -e "s#@bcond_systemd@#bcond_with#g" $@-t
 endif
+if BUILD_INSTALL_QNETD_IN_SBIN
+	sed -i -e "s#@bcond_install_qnetd_in_sbin@#bcond_without#g" $@-t
+else
+	sed -i -e "s#@bcond_install_qnetd_in_sbin@#bcond_with#g" $@-t
+endif
 	chmod a-w $@-t
 	mv $@-t $@
 

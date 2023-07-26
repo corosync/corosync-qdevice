@@ -41,9 +41,15 @@ EXTRA_DIST		= corosync-qnetd-certutil.sh corosync-qdevice-net-certutil.sh
 
 if BUILD_QNETD
 
+if BUILD_INSTALL_QNETD_IN_SBIN
+sbin_PROGRAMS		+= corosync-qnetd corosync-qnetd-tool
+
+sbin_SCRIPTS             += corosync-qnetd-certutil
+else
 bin_PROGRAMS		+= corosync-qnetd corosync-qnetd-tool
 
 bin_SCRIPTS             += corosync-qnetd-certutil
+endif
 
 corosync_qnetd_SOURCES	= corosync-qnetd.c \
                           dynar.c dynar.h msg.c msg.h msgio.c msgio.h \

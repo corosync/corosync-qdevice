@@ -181,6 +181,11 @@ AC_ARG_ENABLE([runautogen],
 	[ enable_runautogen="no" ])
 AM_CONDITIONAL([BUILD_RUNAUTOGEN], [test x$enable_runautogen = xyes])
 
+AC_ARG_ENABLE([install-qnetd-in-sbin],
+	[  --enable-install-qnetd-in-sbin  : Install qnetd binary into sbin directory],,
+	[ enable_install_qnetd_in_sbin="no" ])
+AM_CONDITIONAL([BUILD_INSTALL_QNETD_IN_SBIN], [test x$enable_install_qnetd_in_sbin = xyes])
+
 # *FLAGS handling goes here
 
 ENV_CFLAGS="$CFLAGS"

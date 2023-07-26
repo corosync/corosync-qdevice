@@ -64,6 +64,12 @@ initscript_SCRIPTS  += corosync-qnetd
 endif
 endif
 
+if BUILD_INSTALL_QNETD_IN_SBIN
+qnetddir=$(sbindir)
+else
+qnetddir=$(bindir)
+endif
+
 %: %.in Makefile
 	rm -f $@-t $@
 	cat $< | sed \
@@ -74,6 +80,7 @@ endif
 		-e 's#@''INITDDIR@#$(INITDDIR)#g' \
 		-e 's#@''LOCALSTATEDIR@#$(localstatedir)#g' \
 		-e 's#@''BASHPATH@#${BASHPATH}#g' \
+		-e 's#@''QNETDDIR@#$(qnetddir)#g' \
 	    > $@-t
 	mv $@-t $@
 

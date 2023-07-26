@@ -8,6 +8,7 @@
 %@bcond_userflags@ userflags
 %@bcond_runautogen@ runautogen
 %@bcond_systemd@ systemd
+%@bcond_install_qnetd_in_sbin@ install_qnetd_in_sbin
 
 %global gitver %{?numcomm:.%{numcomm}}%{?alphatag:.%{alphatag}}%{?dirty:.%{dirty}}
 %global gittarver %{?numcomm:.%{numcomm}}%{?alphatag:-%{alphatag}}%{?dirty:-%{dirty}}
@@ -70,6 +71,9 @@ BuildRequires: autoconf automake libtool
 %endif
 %if %{with systemd}
 	--enable-systemd \
+%endif
+%if %{with install_qnetd_in_sbin}
+	--enable-install-qnetd-in-sbin \
 %endif
 	--enable-qdevices \
 	--enable-qnetd \
@@ -206,9 +210,15 @@ fi
 %license LICENSE
 %dir %config(noreplace) %attr(770, coroqnetd, coroqnetd) %{_sysconfdir}/corosync/qnetd
 %dir %attr(770, coroqnetd, coroqnetd) %{_localstatedir}/run/corosync-qnetd
+%if %{with install_qnetd_in_sbin}
+%{_sbindir}/corosync-qnetd
+%{_sbindir}/corosync-qnetd-certutil
+%{_sbindir}/corosync-qnetd-tool
+%else
 %{_bindir}/corosync-qnetd
 %{_bindir}/corosync-qnetd-certutil
 %{_bindir}/corosync-qnetd-tool
+%endif
 %config(noreplace) %{_sysconfdir}/sysconfig/corosync-qnetd
 %if %{with systemd}
 %{_unitdir}/corosync-qnetd.service
