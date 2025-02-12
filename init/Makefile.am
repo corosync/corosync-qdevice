@@ -38,7 +38,8 @@ MAINTAINERCLEANFILES	= Makefile.in
 EXTRA_DIST		= corosync-qdevice.sysconfig.example corosync-qdevice.in \
                           corosync-qdevice.service.in \
                           corosync-qnetd.sysconfig.example corosync-qnetd.in \
-                          corosync-qnetd.service.in
+                          corosync-qnetd.service.in \
+                          corosync-qnetd.sysusers.conf.example
 
 if INSTALL_SYSTEMD
 systemdconfdir     = $(SYSTEMDDIR)
