@@ -186,6 +186,11 @@ AC_ARG_ENABLE([install-qnetd-in-sbin],
 	[ enable_install_qnetd_in_sbin="no" ])
 AM_CONDITIONAL([BUILD_INSTALL_QNETD_IN_SBIN], [test x$enable_install_qnetd_in_sbin = xyes])
 
+AC_ARG_ENABLE([use-sysusers],
+	[  --enable-use-sysusers           : Use sysusers.d file (RPM specfile)],,
+	[ enable_use_sysusers="no" ])
+AM_CONDITIONAL([BUILD_USESYSUSERS], [test x$enable_use_sysusers = xyes])
+
 # *FLAGS handling goes here
 
 ENV_CFLAGS="$CFLAGS"

@@ -135,6 +135,11 @@ if BUILD_INSTALL_QNETD_IN_SBIN
 else
 	sed -i -e "s#@bcond_install_qnetd_in_sbin@#bcond_with#g" $@-t
 endif
+if BUILD_USESYSUSERS
+	sed -i -e "s#@bcond_use_sysusers@#bcond_without#g" $@-t
+else
+	sed -i -e "s#@bcond_use_sysusers@#bcond_with#g" $@-t
+endif
 	chmod a-w $@-t
 	mv $@-t $@
 
