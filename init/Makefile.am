@@ -85,7 +85,7 @@ endif
 	    > $@-t
 	mv $@-t $@
 
-all-local: $(initscript_SCRIPTS) $(systemdconf_DATA) $(upstartconf_DATA)
+all-local: $(initscript_SCRIPTS) $(systemdconf_DATA)
 
 clean-local:
-	rm -rf $(initscript_SCRIPTS) $(systemdconf_DATA) $(upstartconf_DATA)
+	rm -rf $(initscript_SCRIPTS) $(systemdconf_DATA)
