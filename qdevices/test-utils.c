@@ -80,6 +80,45 @@ main(void)
 	assert(utils_strtonum("test", -1000, 1000, &ll) == -1);
 	assert(utils_strtonum("12a", -1000, 1000, &ll) == -1);
 
+	assert(utils_strtonum_base("0", 0, 0100, 8, &ll) == 0);
+	assert(ll == 0);
+
+	assert(utils_strtonum_base("100", 0, 0100, 8, &ll) == 0);
+	assert(ll == 0100);
+
+	assert(utils_strtonum_base("0100", 0, 0100, 8, &ll) == 0);
+	assert(ll == 0100);
+
+	assert(utils_strtonum_base("101", 0, 0100, 8, &ll) != 0);
+	assert(utils_strtonum_base("0", 01, 0100, 8, &ll) != 0);
+	assert(utils_strtonum_base("8", 0, 0100, 8, &ll) != 0);
+
+	for (lli = 0; lli <= 0777; lli++) {
+		assert(snprintf(buf, sizeof(buf), "%llo", lli) > 0);
+
+		assert(utils_strtonum_base(buf, 0, 0777, 8, &ll) == 0);
+		assert(ll == lli);
+	}
+
+	assert(utils_strtonum_base("0", 0, 0100, 16, &ll) == 0);
+	assert(ll == 0);
+
+	assert(utils_strtonum_base("100", 0, 0x100, 16, &ll) == 0);
+	assert(ll == 0x100);
+
+	assert(utils_strtonum_base("0x100", 0, 0x100, 16, &ll) == 0);
+	assert(ll == 0x100);
+
+	assert(utils_strtonum_base("101", 0, 0x0100, 16, &ll) != 0);
+	assert(utils_strtonum_base("0", 0x1, 0x0100, 16, &ll) != 0);
+
+	for (lli = 0; lli <= 0x100; lli++) {
+		assert(snprintf(buf, sizeof(buf), "%llx", lli) > 0);
+
+		assert(utils_strtonum_base(buf, 0, 0x100, 16, &ll) == 0);
+		assert(ll == lli);
+	}
+
 	assert(utils_parse_bool_str("on") == 1);
 	assert(utils_parse_bool_str("yes") == 1);
 	assert(utils_parse_bool_str("1") == 1);

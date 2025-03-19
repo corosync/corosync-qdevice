@@ -65,6 +65,9 @@ extern int		utils_fd_set_non_blocking(int fd);
 extern int		utils_strtonum(const char *str, long long int min_val,
     long long int max_val, long long int *res);
 
+extern int		utils_strtonum_base(const char *str, long long int min_val,
+    long long int max_val, int base, long long int *res);
+
 extern int		utils_strtod(const char *str, double min_val, double max_val,
     double *res);
 

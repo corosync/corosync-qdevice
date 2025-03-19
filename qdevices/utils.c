@@ -212,8 +212,8 @@ utils_fd_set_non_blocking(int fd)
  * Safer wrapper of strtoll. Return 0 on success, otherwise -1.
  */
 int
-utils_strtonum(const char *str, long long int min_val, long long int max_val,
-    long long int *res)
+utils_strtonum_base(const char *str, long long int min_val, long long int max_val,
+    int base, long long int *res)
 {
 	long long int tmp_ll;
 	char *ep;
@@ -224,7 +224,7 @@ utils_strtonum(const char *str, long long int min_val, long long int max_val,
 
 	errno = 0;
 
-	tmp_ll = strtoll(str, &ep, 10);
+	tmp_ll = strtoll(str, &ep, base);
 	if (ep == str || *ep != '\0' || errno != 0) {
 		return (-1);
 	}
@@ -236,6 +236,17 @@ utils_strtonum(const char *str, long long int min_val, long long int max_val,
 	*res = tmp_ll;
 
 	return (0);
+}
+
+/*
+ * Shortcut for decimal utils_strtonum_base
+ */
+int
+utils_strtonum(const char *str, long long int min_val, long long int max_val,
+    long long int *res)
+{
+
+	return (utils_strtonum_base(str, min_val, max_val, 10, res));
 }
 
 /*
