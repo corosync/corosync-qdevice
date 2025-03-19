@@ -103,6 +103,37 @@ main(void)
 	assert(strcmp(dynar_data(&lex.value), "") == 0);
 	dynar_getopt_lex_destroy(&lex);
 
+	assert(dynar_str_cpy(&input_str, "") == 0);
+	assert(dynar_str_catf(&input_str, "option1,option2=") != -1);
+	dynar_getopt_lex_init(&lex, &input_str);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "option1") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "option2") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	dynar_getopt_lex_destroy(&lex);
+
+	assert(dynar_str_cpy(&input_str, "") == 0);
+	assert(dynar_str_catf(&input_str, "option1,option2=,option3=value3") != -1);
+	dynar_getopt_lex_init(&lex, &input_str);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "option1") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "option2") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "option3") == 0);
+	assert(strcmp(dynar_data(&lex.value), "value3") == 0);
+	assert(dynar_getopt_lex_token_next(&lex) == 0);
+	assert(strcmp(dynar_data(&lex.option), "") == 0);
+	assert(strcmp(dynar_data(&lex.value), "") == 0);
+	dynar_getopt_lex_destroy(&lex);
+
 	dynar_destroy(&input_str);
 
 	return (0);
