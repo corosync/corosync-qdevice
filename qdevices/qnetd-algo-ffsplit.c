@@ -34,6 +34,7 @@
 
 #include <sys/types.h>
 
+#include <assert.h>
 #include <string.h>
 
 #include "log.h"
@@ -116,6 +117,7 @@ qnetd_algo_ffsplit_is_preferred_partition(const struct qnetd_client *client,
 	switch (client->tie_breaker.mode) {
 	case TLV_TIE_BREAKER_MODE_LOWEST:
 		node_entry = TAILQ_FIRST(config_node_list);
+		assert(node_entry != NULL);
 
 		preferred_node_id = node_entry->node_id;
 
@@ -128,6 +130,7 @@ qnetd_algo_ffsplit_is_preferred_partition(const struct qnetd_client *client,
 		break;
 	case TLV_TIE_BREAKER_MODE_HIGHEST:
 		node_entry = TAILQ_FIRST(config_node_list);
+		assert(node_entry != NULL);
 
 		preferred_node_id = node_entry->node_id;
 
