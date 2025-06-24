@@ -369,7 +369,10 @@ qdevice_model_net_post_poll_loop(struct qdevice_instance *instance,
 	if (restart_loop &&
 	    net_instance->state != QDEVICE_NET_INSTANCE_STATE_WAITING_CONNECT) {
 		/*
-		 * Give qnetd server a little time before reconnect
+		 * Give qnetd server a little time before reconnect.
+		 *
+		 * Coverity reports weak_crypto error on following line, what's not a problem
+		 * because cryptographically secure pseudorandom number generator is not needed.
 		 */
 		delay_before_reconnect = random() %
 		    (int)(net_instance->cast_vote_timer_interval * 0.9);
