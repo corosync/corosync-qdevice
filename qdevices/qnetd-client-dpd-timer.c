@@ -32,6 +32,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <assert.h>
+
 #include "log.h"
 #include "qnetd-client-dpd-timer.h"
 
@@ -41,6 +43,8 @@ qnetd_dpd_timer_cb(void *data1, void *data2)
 	struct qnetd_client *client;
 
 	client = (struct qnetd_client *)data1;
+
+	assert(client->dpd_timer != NULL);
 
 	log(LOG_WARNING, "Client %s doesn't sent any message during "
 	    "%" PRIu32 "ms. Disconnecting",
