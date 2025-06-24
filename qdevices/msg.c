@@ -154,11 +154,8 @@ msg_create_preinit(struct dynar *msg, const char *cluster_name, int add_msg_seq_
 
 	dynar_clean(msg);
 
-	if (msg_add_type(msg, MSG_TYPE_PREINIT) == -1) {
-		goto small_buf_err;
-	}
-
-	if (msg_add_len(msg) == -1) {
+	if (msg_add_type(msg, MSG_TYPE_PREINIT) == -1 ||
+	    msg_add_len(msg) == -1) {
 		goto small_buf_err;
 	}
 
@@ -187,8 +184,10 @@ msg_create_preinit_reply(struct dynar *msg, int add_msg_seq_number, uint32_t msg
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_PREINIT_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_PREINIT_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -218,8 +217,10 @@ msg_create_starttls(struct dynar *msg, int add_msg_seq_number, uint32_t msg_seq_
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_STARTTLS);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_STARTTLS) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -242,8 +243,10 @@ msg_create_server_error(struct dynar *msg, int add_msg_seq_number, uint32_t msg_
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_SERVER_ERROR);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_SERVER_ERROR) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -296,8 +299,10 @@ msg_create_init(struct dynar *msg, int add_msg_seq_number, uint32_t msg_seq_numb
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_INIT);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_INIT) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -371,8 +376,10 @@ msg_create_init_reply(struct dynar *msg, int add_msg_seq_number, uint32_t msg_se
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_INIT_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_INIT_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_reply_error_code(msg, reply_error_code) == -1) {
 		goto small_buf_err;
@@ -438,8 +445,10 @@ msg_create_set_option(struct dynar *msg, int add_msg_seq_number, uint32_t msg_se
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_SET_OPTION);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_SET_OPTION) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -477,8 +486,10 @@ msg_create_set_option_reply(struct dynar *msg, int add_msg_seq_number, uint32_t 
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_SET_OPTION_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_SET_OPTION_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -513,8 +524,10 @@ msg_create_echo_request(struct dynar *msg, int add_msg_seq_number, uint32_t msg_
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_ECHO_REQUEST);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_ECHO_REQUEST) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (add_msg_seq_number) {
 		if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
@@ -562,8 +575,10 @@ msg_create_node_list(struct dynar *msg,
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_NODE_LIST);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_NODE_LIST) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -621,8 +636,10 @@ msg_create_node_list_reply(struct dynar *msg, uint32_t msg_seq_number,
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_NODE_LIST_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_NODE_LIST_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -654,8 +671,10 @@ msg_create_ask_for_vote(struct dynar *msg, uint32_t msg_seq_number)
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_ASK_FOR_VOTE);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_ASK_FOR_VOTE) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -676,8 +695,10 @@ msg_create_ask_for_vote_reply(struct dynar *msg, uint32_t msg_seq_number,
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_ASK_FOR_VOTE_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_ASK_FOR_VOTE_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -706,8 +727,10 @@ msg_create_vote_info(struct dynar *msg, uint32_t msg_seq_number, const struct tl
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_VOTE_INFO);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_VOTE_INFO) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -735,8 +758,10 @@ msg_create_vote_info_reply(struct dynar *msg, uint32_t msg_seq_number)
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_VOTE_INFO_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_VOTE_INFO_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -757,8 +782,10 @@ msg_create_heuristics_change(struct dynar *msg, uint32_t msg_seq_number,
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_HEURISTICS_CHANGE);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_HEURISTICS_CHANGE) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
@@ -783,8 +810,10 @@ msg_create_heuristics_change_reply(struct dynar *msg, uint32_t msg_seq_number,
 
 	dynar_clean(msg);
 
-	msg_add_type(msg, MSG_TYPE_HEURISTICS_CHANGE_REPLY);
-	msg_add_len(msg);
+	if (msg_add_type(msg, MSG_TYPE_HEURISTICS_CHANGE_REPLY) == -1 ||
+	    msg_add_len(msg) == -1) {
+		goto small_buf_err;
+	}
 
 	if (tlv_add_msg_seq_number(msg, msg_seq_number) == -1) {
 		goto small_buf_err;
