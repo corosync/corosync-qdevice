@@ -48,9 +48,11 @@ P12_FILE_BASE="qdevice-net-node.p12"
 QNETD_CERTUTIL_CMD="corosync-qnetd-certutil"
 CERTDB_FILES=("cert9.db key4.db pkcs11.txt"
               "cert8.db key3.db secmod.db")
+REMOTE_SHELL_EXECUTABLE="ssh"
+REMOTE_COPY_EXECUTABLE="scp"
 
 usage() {
-    echo "$0: [-i|-m|-M|-r|-s|-Q] [-c certificate] [-n cluster_name]"
+    echo "$0: [-i|-m|-M|-r|-s|-Q] [-c certificate] [-S ssh_command] [-C scp_command] [-n cluster_name]"
     echo
     echo " -i      Initialize node CA. Needs CA certificate from server"
     echo " -m      Import cluster certificate on node (needs pk12 certificate)"
@@ -59,6 +61,8 @@ usage() {
     echo " -Q      Quick start. Uses ssh/scp to initialze both qnetd and nodes."
     echo ""
     echo " -c certificate      Ether CA, CRQ, CRT or pk12 certificate (operation dependant)"
+    echo " -S ssh_command      Alternative remote shell command to be use in place of ssh. If not specified, ssh is used."
+    echo " -C scp_command      Alternative remote copy command to be use in place of scp. If not specified, scp is used."
     echo " -n cluster_name     Name of cluster (for -r and -s operations)"
     echo ""
     echo "Typical usage:"
@@ -75,8 +79,8 @@ usage() {
     echo "  - Init database by running $0 -i -c `basename $CA_EXPORT_FILE`"
     echo "  - Import cluster certificate and key: $0 -m -c `basename $P12_FILE_BASE`"
     echo ""
-    echo "It is also possible to use Quick start (-Q). This needs properly configured ssh."
-    echo "  $0 -Q -n Cluster qnetd_server node1 node2 ... nodeN"
+    echo "It is also possible to use Quick start (-Q). This needs properly configured remote shell command and remote copy command (ssh and scp by default)."
+    echo "  $0 -Q [-S ssh_command] [-C scp_command] -n Cluster qnetd_server node1 node2 ... nodeN"
 
     exit 0
 }
@@ -214,8 +218,8 @@ import_pk12() {
 remote_scp() {
     tmp_file=`mktemp`
 
-    scp "$1" "$tmp_file"
-    scp "$tmp_file" "$2"
+    $REMOTE_COPY_EXECUTABLE "$1" "$tmp_file"
+    $REMOTE_COPY_EXECUTABLE "$tmp_file" "$2"
 
     rm -f "$tmp_file"
 }
@@ -227,13 +231,13 @@ quick_start() {
 
     # Sanity check
     for i in "$master_node" $other_nodes;do
-        if ssh root@$i "[ -d \"$DB_DIR_NODE\" ]";then
+        if $REMOTE_SHELL_EXECUTABLE root@$i "[ -d \"$DB_DIR_NODE\" ]";then
             echo "Node $i seems to be already initialized. Please delete $DB_DIR_NODE" >&2
 
             exit 1
         fi
 
-        if ! ssh "root@$i" "$0" > /dev/null;then
+        if ! $REMOTE_SHELL_EXECUTABLE "root@$i" "$0" > /dev/null;then
             echo "Node $i doesn't have $0 installed" >&2
 
             exit 1
@@ -241,34 +245,34 @@ quick_start() {
     done
 
     # Initialize qnetd server (it's no problem if server is already initialized)
-    ssh "root@$qnetd_addr" "$QNETD_CERTUTIL_CMD -i"
+    $REMOTE_SHELL_EXECUTABLE "root@$qnetd_addr" "$QNETD_CERTUTIL_CMD -i"
 
     # Copy CA cert to all nodes and initialize them
     for node in "$master_node" $other_nodes;do
         remote_scp "root@$qnetd_addr:$CA_EXPORT_FILE" "root@$node:/tmp/`basename $CA_EXPORT_FILE`"
-        ssh "root@$node" "$0 -i -c \"/tmp/`basename $CA_EXPORT_FILE`\" && rm /tmp/`basename $CA_EXPORT_FILE`"
+        $REMOTE_SHELL_EXECUTABLE "root@$node" "$0 -i -c \"/tmp/`basename $CA_EXPORT_FILE`\" && rm /tmp/`basename $CA_EXPORT_FILE`"
     done
 
     # Generate cert request
-    ssh "root@$master_node" "$0 -r -n \"$CLUSTER_NAME\""
+    $REMOTE_SHELL_EXECUTABLE "root@$master_node" "$0 -r -n \"$CLUSTER_NAME\""
 
     # Copy exported cert request to qnetd server
     remote_scp "root@$master_node:$DB_DIR_NODE/$CRQ_FILE_BASE" "root@$qnetd_addr:/tmp/$CRQ_FILE_BASE"
 
     # Sign and export cluster certificate
-    ssh "root@$qnetd_addr" "$QNETD_CERTUTIL_CMD -s -c \"/tmp/$CRQ_FILE_BASE\" -n \"$CLUSTER_NAME\""
+    $REMOTE_SHELL_EXECUTABLE "root@$qnetd_addr" "$QNETD_CERTUTIL_CMD -s -c \"/tmp/$CRQ_FILE_BASE\" -n \"$CLUSTER_NAME\""
 
     # Copy exported CRT to master node
     remote_scp "root@$qnetd_addr:$DB_DIR_QNETD/cluster-$CLUSTER_NAME.crt" \
         "root@$master_node:$DB_DIR_NODE/cluster-$CLUSTER_NAME.crt"
 
     # Import certificate
-    ssh "root@$master_node" "$0 -M -c \"$DB_DIR_NODE/cluster-$CLUSTER_NAME.crt\""
+    $REMOTE_SHELL_EXECUTABLE "root@$master_node" "$0 -M -c \"$DB_DIR_NODE/cluster-$CLUSTER_NAME.crt\""
 
     # Copy pk12 cert to all nodes and import it
     for node in $other_nodes;do
         remote_scp "root@$master_node:$DB_DIR_NODE/$P12_FILE" "$node:$DB_DIR_NODE/$P12_FILE"
-        ssh "root@$node" "$0 -m -c \"$DB_DIR_NODE/$P12_FILE\""
+        $REMOTE_SHELL_EXECUTABLE "root@$node" "$0 -m -c \"$DB_DIR_NODE/$P12_FILE\""
     done
 }
 
@@ -276,7 +280,7 @@ OPERATION=""
 CERTIFICATE_FILE=""
 CLUSTER_NAME=""
 
-while getopts ":hiMmQrc:n:" opt; do
+while getopts ":hiMmQrc:S:C:n:" opt; do
     case $opt in
         r)
             OPERATION=gen_cluster_cert_req
@@ -296,6 +300,12 @@ while getopts ":hiMmQrc:n:" opt; do
         n)
             CLUSTER_NAME="$OPTARG"
             ;;
+	    S)
+	        REMOTE_SHELL_EXECUTABLE="$OPTARG"
+	        ;;
+	    C)
+	        REMOTE_COPY_EXECUTABLE="$OPTARG"
+	        ;;
         h)
             usage
             ;;
