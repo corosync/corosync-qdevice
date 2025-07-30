@@ -35,7 +35,7 @@
 .SH NAME
 corosync-qdevice-net-certutil - tool to generate qdevice model net TLS certificates
 .SH SYNOPSIS
-.B "corosync-qdevice-net-certutil [-i|-m|-M|-r|-s|-Q] [-c certificate] [-n cluster_name]"
+.B "corosync-qdevice-net-certutil [-i|-m|-M|-r|-s|-Q] [-c certificate] [-S ssh_command] [-C scp_command] [-n cluster_name]"
 .SH DESCRIPTION
 .B corosync-qdevice-net-certutil
 is a frontend for NSS certutil used for generating client certificate for the net model of
@@ -74,6 +74,12 @@ or ssh/scp will keep asking for a password - roughly 8 times the number of nodes
 .TP
 .B -c
 File with certificate to load.
+.TP
+.B -S
+Alternative remote shell command to be use in place of ssh. If not specified, ssh is used.
+.TP
+.B -C
+Alternative remote copy command to be use in place of scp. If not specified, scp is used.
 .TP
 .B -n
 Name of the cluster.
