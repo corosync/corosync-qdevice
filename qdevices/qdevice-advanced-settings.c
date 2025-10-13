@@ -34,6 +34,9 @@
 
 #include <stdlib.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
@@ -57,6 +60,7 @@ qdevice_advanced_settings_init(struct qdevice_advanced_settings *settings)
 	if ((settings->local_socket_file = strdup(QDEVICE_DEFAULT_LOCAL_SOCKET_FILE)) == NULL) {
 		return (-1);
 	}
+	settings->set_local_socket_umask = 0;
 	settings->local_socket_backlog = QDEVICE_DEFAULT_LOCAL_SOCKET_BACKLOG;
 	settings->max_cs_try_again = QDEVICE_DEFAULT_MAX_CS_TRY_AGAIN;
 	if ((settings->votequorum_device_name = strdup(QDEVICE_DEFAULT_VOTEQUORUM_DEVICE_NAME)) == NULL) {
@@ -140,6 +144,11 @@ qdevice_advanced_settings_set(struct qdevice_advanced_settings *settings,
 
 		if ((settings->local_socket_file = strdup(value)) == NULL) {
 			return (-1);
+		}
+	} else if (strcasecmp(option, "local_socket_umask") == 0) {
+		if (utils_parse_umask(value, &settings->set_local_socket_umask,
+		    &settings->local_socket_umask) != 0) {
+			return (-2);
 		}
 	} else if (strcasecmp(option, "local_socket_backlog") == 0) {
 		if (utils_strtonum(value, QDEVICE_MIN_LOCAL_SOCKET_BACKLOG, INT_MAX, &tmpll) == -1) {

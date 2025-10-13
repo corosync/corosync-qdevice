@@ -48,6 +48,8 @@ main(void)
 	double dbl;
 	double dbli;
 	char buf[32];
+	int set_umask;
+	mode_t umask;
 
 	assert(utils_strtonum("0", 0, 100, &ll) == 0);
 	assert(ll == 0);
@@ -175,6 +177,27 @@ main(void)
 	assert(utils_strtod("12a", -1000, 1000, &dbl) == -1);
 	assert(utils_strtod("inf", -1000, 1000, &dbl) == -1);
 	assert(utils_strtod("nan", -1000, 1000, &dbl) == -1);
+
+	assert(utils_parse_umask("0", &set_umask, &umask) == 0);
+	assert(set_umask == 1 && umask == 0);
+
+	assert(utils_parse_umask("02", &set_umask, &umask) == 0);
+	assert(set_umask == 1 && umask == 02);
+
+	assert(utils_parse_umask("777", &set_umask, &umask) == 0);
+	assert(set_umask == 1 && umask == 0777);
+
+	assert(utils_parse_umask("", &set_umask, &umask) == 0);
+	assert(set_umask == 0);
+
+	assert(utils_parse_umask("02", &set_umask, &umask) == 0);
+	assert(set_umask == 1 && umask == 02);
+
+	assert(utils_parse_umask("string", &set_umask, &umask) == -1);
+	assert(utils_parse_umask("888", &set_umask, &umask) == -1);
+	assert(utils_parse_umask("8", &set_umask, &umask) == -1);
+	assert(utils_parse_umask("unset", &set_umask, &umask) == -1);
+
 
 	return (0);
 }

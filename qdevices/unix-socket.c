@@ -32,7 +32,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 
 #include <errno.h>
@@ -43,10 +45,13 @@
 #include "utils.h"
 
 int
-unix_socket_server_create(const char *path, int non_blocking, int backlog)
+unix_socket_server_create(const char *path, int set_socket_umask, mode_t socket_umask,
+    int non_blocking, int backlog)
 {
 	int s;
 	struct sockaddr_un sun;
+	mode_t old_umask;
+	int bind_res;
 
 	if (strlen(path) >= sizeof(sun.sun_path) || strlen(path) == 0) {
 		errno = ENAMETOOLONG;
@@ -62,7 +67,18 @@ unix_socket_server_create(const char *path, int non_blocking, int backlog)
 
 	strncpy(sun.sun_path, path, sizeof(sun.sun_path) - 1);
 	unlink(path);
-	if (bind(s, (struct sockaddr *)&sun, SUN_LEN(&sun)) != 0) {
+
+	if (set_socket_umask) {
+		old_umask = umask(socket_umask);
+	}
+
+	bind_res = bind(s, (struct sockaddr *)&sun, SUN_LEN(&sun));
+
+	if (set_socket_umask) {
+		(void)umask(old_umask);
+	}
+
+	if (bind_res != 0) {
 		close(s);
 
 		return (-1);

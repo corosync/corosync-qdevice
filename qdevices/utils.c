@@ -278,3 +278,27 @@ utils_strtod(const char *str, double min_val, double max_val,
 
 	return (0);
 }
+
+/*
+ * Check if string is empty and set set_umask to 0, or parse string
+ * as umask octal number and set set_umask to 1 and umask value.
+ * Return 0 on success, otherwise -1.
+ */
+int
+utils_parse_umask(const char *str, int *set_umask, mode_t *umask)
+{
+	long long int tmpll;
+
+	if (strcmp(str, "") == 0) {
+		*set_umask = 0;
+	} else {
+		if (utils_strtonum_base(str, 0, S_IRWXU|S_IRWXG|S_IRWXO, 8, &tmpll) == -1) {
+			return (-1);
+		}
+
+		*set_umask = 1;
+		*umask = (mode_t)tmpll;
+	}
+
+	return (0);
+}

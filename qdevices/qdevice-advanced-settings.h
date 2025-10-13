@@ -35,6 +35,8 @@
 #ifndef _QDEVICE_ADVANCED_SETTINGS_H_
 #define _QDEVICE_ADVANCED_SETTINGS_H_
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +50,8 @@ enum qdevice_advanced_settings_master_wins {
 struct qdevice_advanced_settings {
 	char *lock_file;
 	char *local_socket_file;
+	int set_local_socket_umask;
+	mode_t local_socket_umask;
 	int local_socket_backlog;
 	int max_cs_try_again;
 	char *votequorum_device_name;

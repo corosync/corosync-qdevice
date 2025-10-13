@@ -71,6 +71,9 @@ extern int		utils_strtonum_base(const char *str, long long int min_val,
 extern int		utils_strtod(const char *str, double min_val, double max_val,
     double *res);
 
+extern int		utils_parse_umask(const char *str, int *set_umask,
+    mode_t *umask);
+
 #ifdef __cplusplus
 }
 #endif

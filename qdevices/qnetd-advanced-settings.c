@@ -34,6 +34,9 @@
 
 #include <stdlib.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
@@ -70,6 +73,7 @@ qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings)
 	if ((settings->local_socket_file = strdup(QNETD_DEFAULT_LOCAL_SOCKET_FILE)) == NULL) {
 		return (-1);
 	}
+	settings->set_local_socket_umask = 0;
 	settings->local_socket_backlog = QNETD_DEFAULT_LOCAL_SOCKET_BACKLOG;
 	settings->ipc_max_clients = QNETD_DEFAULT_IPC_MAX_CLIENTS;
 	settings->ipc_max_receive_size = QNETD_DEFAULT_IPC_MAX_RECEIVE_SIZE;
@@ -177,6 +181,11 @@ qnetd_advanced_settings_set(struct qnetd_advanced_settings *settings,
 
 		if ((settings->local_socket_file = strdup(value)) == NULL) {
 			return (-1);
+		}
+	} else if (strcasecmp(option, "local_socket_umask") == 0) {
+		if (utils_parse_umask(value, &settings->set_local_socket_umask,
+		    &settings->local_socket_umask) != 0) {
+			return (-2);
 		}
 	} else if (strcasecmp(option, "local_socket_backlog") == 0) {
 		if (utils_strtonum(value, QNETD_MIN_LOCAL_SOCKET_BACKLOG, INT_MAX, &tmpll) == -1) {

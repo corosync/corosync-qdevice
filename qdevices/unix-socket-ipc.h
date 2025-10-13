@@ -53,7 +53,8 @@ struct unix_socket_ipc {
 };
 
 extern int		unix_socket_ipc_init(struct unix_socket_ipc *ipc,
-    const char *socket_file_name, int backlog, size_t max_clients, size_t max_receive_size,
+    const char *socket_file_name, int set_socket_umask, mode_t socket_umask,
+    int backlog, size_t max_clients, size_t max_receive_size,
     size_t max_send_size);
 
 extern int		unix_socket_ipc_destroy(struct unix_socket_ipc *ipc);

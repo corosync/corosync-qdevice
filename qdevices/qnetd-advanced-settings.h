@@ -35,6 +35,8 @@
 #ifndef _QNETD_ADVANCED_SETTINGS_H_
 #define _QNETD_ADVANCED_SETTINGS_H_
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -51,6 +53,8 @@ struct qnetd_advanced_settings {
 	uint8_t dpd_enabled;
 	char *lock_file;
 	char *local_socket_file;
+	int set_local_socket_umask;
+	mode_t local_socket_umask;
 	int local_socket_backlog;
 	size_t ipc_max_clients;
 	size_t ipc_max_send_size;

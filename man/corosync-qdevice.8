@@ -31,7 +31,7 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QDEVICE 8 2020-10-27
+.TH COROSYNC-QDEVICE 8 2025-10-13
 .SH NAME
 corosync-qdevice \- QDevice daemon
 .SH SYNOPSIS
@@ -356,6 +356,10 @@ Lock file location. (/var/run/corosync-qdevice/corosync-qdevice.pid)
 .TP
 .B local_socket_file
 Internal IPC socket file location. (/var/run/corosync-qdevice/corosync-qdevice.sock)
+.TP
+.B local_socket_umask
+Octal value of umask used before creating of internal IPC socket file or empty if umask
+shouldn't be modified. ()
 .TP
 .B local_socket_backlog
 Parameter passed to listen syscall. (10)
