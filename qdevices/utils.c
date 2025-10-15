@@ -40,8 +40,10 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <inttypes.h>
 #include <libgen.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +52,8 @@
 #include <syslog.h>
 
 #include "utils.h"
+
+#define UTILS_GID_DETERMINE_MAX_SIZE	65536
 
 /*
  * Check string to value on, off, yes, no, 0, 1. Return 1 if value is on, yes or 1, 0 if
@@ -301,4 +305,83 @@ utils_parse_umask(const char *str, int *set_umask, mode_t *umask)
 	}
 
 	return (0);
+}
+
+/*
+ * Get gid of group with grp_name name. On success, 0 is returned and
+ * gid contains valid group id or -1 if grp_name is empty string or -1.
+ * In case of error including group doesn't exist -1 is returned and
+ * gid is not changed.
+ */
+int
+utils_get_group_gid(const char *grp_name, gid_t *gid)
+{
+	long long int tmpll;
+	char *grp_buf, *tmp_buf;
+	long int grp_buf_size;
+	int res;
+	struct group grp, *grp_res;
+	int ret;
+
+	ret = 0;
+
+	if (strcmp(grp_name, "") == 0) {
+		*gid = (gid_t)-1;
+
+		return (0);
+	}
+
+	if (utils_strtonum(grp_name, -1, UINT_MAX, &tmpll) == 0) {
+		*gid = (gid_t)tmpll;
+
+		return (0);
+	}
+
+	grp_buf_size = sysconf(_SC_GETGR_R_SIZE_MAX);
+	if (grp_buf_size == -1) {
+		grp_buf_size = 4096;
+	}
+
+	grp_buf = malloc(grp_buf_size);
+	if (grp_buf == NULL) {
+		return (-1);
+	}
+
+	while ((res = getgrnam_r(grp_name, &grp, grp_buf, grp_buf_size, &grp_res)) == ERANGE) {
+		grp_buf_size *= 2;
+
+		if (grp_buf_size > UTILS_GID_DETERMINE_MAX_SIZE) {
+			ret = -1;
+
+			goto exit_free_grp_buf;
+		}
+
+		tmp_buf = realloc(grp_buf, grp_buf_size);
+		if (tmp_buf == NULL) {
+			ret = -1;
+
+			goto exit_free_grp_buf;
+		}
+
+		grp_buf = tmp_buf;
+	}
+
+	if (res != 0) {
+		ret = -1;
+
+		goto exit_free_grp_buf;
+	}
+
+	if (grp_res == NULL) {
+		ret = -1;
+
+		goto exit_free_grp_buf;
+	} else {
+		*gid = grp.gr_gid;
+	}
+
+exit_free_grp_buf:
+	free(grp_buf);
+
+	return (ret);
 }

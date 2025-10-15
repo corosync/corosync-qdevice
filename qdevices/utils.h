@@ -74,6 +74,8 @@ extern int		utils_strtod(const char *str, double min_val, double max_val,
 extern int		utils_parse_umask(const char *str, int *set_umask,
     mode_t *umask);
 
+extern int		utils_get_group_gid(const char *grp_name, gid_t *gid);
+
 #ifdef __cplusplus
 }
 #endif

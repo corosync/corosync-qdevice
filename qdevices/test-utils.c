@@ -32,11 +32,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
 #include <assert.h>
-#include <string.h>
-#include <math.h>
 #include <errno.h>
+#include <grp.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "utils.h"
 
@@ -50,6 +52,9 @@ main(void)
 	char buf[32];
 	int set_umask;
 	mode_t umask;
+	gid_t gid;
+	struct group *grp;
+	char *s;
 
 	assert(utils_strtonum("0", 0, 100, &ll) == 0);
 	assert(ll == 0);
@@ -198,6 +203,27 @@ main(void)
 	assert(utils_parse_umask("8", &set_umask, &umask) == -1);
 	assert(utils_parse_umask("unset", &set_umask, &umask) == -1);
 
+	assert(utils_get_group_gid("0", &gid) == 0);
+	assert(gid == 0);
+
+	assert(utils_get_group_gid("", &gid) == 0);
+	assert(gid == -1);
+
+	assert(utils_get_group_gid("1000", &gid) == 0);
+	assert(gid == 1000);
+
+	assert(utils_get_group_gid("-1", &gid) == 0);
+	assert(gid == -1);
+
+	assert((grp = getgrgid(0)) != NULL);
+	assert((s = strdup(grp->gr_name)) != NULL);
+
+	assert(utils_get_group_gid(s, &gid) == 0);
+	assert(gid == 0);
+
+	free(s);
+
+	assert(utils_get_group_gid("qdevicetestnonexistinggroup", &gid) == -1);
 
 	return (0);
 }
