@@ -177,6 +177,7 @@ qnetd_ipc_init(struct qnetd_instance *instance)
 	    instance->advanced_settings->local_socket_file,
 	    instance->advanced_settings->set_local_socket_umask,
 	    instance->advanced_settings->local_socket_umask,
+	    instance->advanced_settings->local_socket_gid,
 	    instance->advanced_settings->local_socket_backlog,
 	    instance->advanced_settings->ipc_max_clients,
 	    instance->advanced_settings->ipc_max_receive_size,

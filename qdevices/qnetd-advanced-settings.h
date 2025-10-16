@@ -55,6 +55,7 @@ struct qnetd_advanced_settings {
 	char *local_socket_file;
 	int set_local_socket_umask;
 	mode_t local_socket_umask;
+	gid_t local_socket_gid;
 	int local_socket_backlog;
 	size_t ipc_max_clients;
 	size_t ipc_max_send_size;

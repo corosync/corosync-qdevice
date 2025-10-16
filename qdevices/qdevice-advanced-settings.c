@@ -61,6 +61,7 @@ qdevice_advanced_settings_init(struct qdevice_advanced_settings *settings)
 		return (-1);
 	}
 	settings->set_local_socket_umask = 0;
+	settings->local_socket_gid = -1;
 	settings->local_socket_backlog = QDEVICE_DEFAULT_LOCAL_SOCKET_BACKLOG;
 	settings->max_cs_try_again = QDEVICE_DEFAULT_MAX_CS_TRY_AGAIN;
 	if ((settings->votequorum_device_name = strdup(QDEVICE_DEFAULT_VOTEQUORUM_DEVICE_NAME)) == NULL) {
@@ -148,6 +149,10 @@ qdevice_advanced_settings_set(struct qdevice_advanced_settings *settings,
 	} else if (strcasecmp(option, "local_socket_umask") == 0) {
 		if (utils_parse_umask(value, &settings->set_local_socket_umask,
 		    &settings->local_socket_umask) != 0) {
+			return (-2);
+		}
+	} else if (strcasecmp(option, "local_socket_gid") == 0) {
+		if (utils_get_group_gid(value, &settings->local_socket_gid) != 0) {
 			return (-2);
 		}
 	} else if (strcasecmp(option, "local_socket_backlog") == 0) {

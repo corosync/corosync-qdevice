@@ -44,7 +44,8 @@ extern "C" {
 #endif
 
 extern int		unix_socket_server_create(const char *path,
-    int set_socket_umask, mode_t socket_umask, int non_blocking, int backlog);
+    int set_socket_umask, mode_t socket_umask, gid_t socket_gid,
+    int non_blocking, int backlog);
 
 extern int		unix_socket_client_create(const char *path, int non_blocking);
 

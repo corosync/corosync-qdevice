@@ -31,7 +31,7 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QNETD 8 2025-10-13
+.TH COROSYNC-QNETD 8 2025-10-16
 .SH NAME
 corosync-qnetd \- QNet daemon
 .SH SYNOPSIS
@@ -229,6 +229,11 @@ Internal IPC socket file location. (/var/run/corosync-qnetd/corosync-qnetd.sock)
 .B local_socket_umask
 Octal value of umask used before creating of internal IPC socket file or empty if umask
 shouldn't be modified. ()
+.TP
+.B local_socket_gid
+Sets the group ownership for the internal IPC socket file.
+This can be specified as a group name or a numeric GID.
+An empty value or the default of -1 leaves the group ownership unchanged. (-1)
 .TP
 .B local_socket_backlog
 Parameter passed to listen syscall on the local socket. (10)

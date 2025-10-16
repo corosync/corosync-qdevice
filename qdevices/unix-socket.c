@@ -46,7 +46,7 @@
 
 int
 unix_socket_server_create(const char *path, int set_socket_umask, mode_t socket_umask,
-    int non_blocking, int backlog)
+    gid_t socket_gid, int non_blocking, int backlog)
 {
 	int s;
 	struct sockaddr_un sun;
@@ -76,6 +76,14 @@ unix_socket_server_create(const char *path, int set_socket_umask, mode_t socket_
 
 	if (set_socket_umask) {
 		(void)umask(old_umask);
+	}
+
+	if (socket_gid != -1) {
+		if (chown(path, -1, socket_gid) != 0) {
+			close(s);
+
+			return (-1);
+		}
 	}
 
 	if (bind_res != 0) {
@@ -137,8 +145,6 @@ unix_socket_client_create(const char *path, int non_blocking)
 
 	return (s);
 }
-
-
 
 int
 unix_socket_server_destroy(int sock, const char *path)

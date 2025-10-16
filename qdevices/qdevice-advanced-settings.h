@@ -52,6 +52,7 @@ struct qdevice_advanced_settings {
 	char *local_socket_file;
 	int set_local_socket_umask;
 	mode_t local_socket_umask;
+	gid_t local_socket_gid;
 	int local_socket_backlog;
 	int max_cs_try_again;
 	char *votequorum_device_name;
