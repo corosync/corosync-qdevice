@@ -958,7 +958,7 @@ static struct qnetd_algorithm qnetd_algo_ffsplit = {
 	.timer_callback			= qnetd_algo_ffsplit_timer_callback,
 };
 
-enum tlv_reply_error_code qnetd_algo_ffsplit_register()
+enum tlv_reply_error_code qnetd_algo_ffsplit_register(void)
 {
 
 	return (qnetd_algorithm_register(TLV_DECISION_ALGORITHM_TYPE_FFSPLIT, &qnetd_algo_ffsplit));

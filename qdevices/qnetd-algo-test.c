@@ -277,7 +277,7 @@ static struct qnetd_algorithm qnetd_algo_test = {
 	.timer_callback			= qnetd_algo_test_timer_callback,
 };
 
-enum tlv_reply_error_code qnetd_algo_test_register()
+enum tlv_reply_error_code qnetd_algo_test_register(void)
 {
 
 	return (qnetd_algorithm_register(TLV_DECISION_ALGORITHM_TYPE_TEST, &qnetd_algo_test));
