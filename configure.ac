@@ -112,6 +112,15 @@ AC_CONFIG_FILES([Makefile
 # Helpers
 # ===============================================
 
+## check if the compiler supports -Werror -Wunknown-warning-option
+AC_MSG_CHECKING([whether $CC supports -Wunknown-warning-option -Werror])
+BACKUP="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS -Werror -Wunknown-warning-option"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+		  [unknown_warnings_as_errors='-Wunknown-warning-option -Werror'; AC_MSG_RESULT([yes])],
+		  [unknown_warnings_as_errors=''; AC_MSG_RESULT([no])])
+CPPFLAGS="$BACKUP"
+
 ## helper for CC stuff
 cc_supports_flag() {
 	BACKUP="$CPPFLAGS"
