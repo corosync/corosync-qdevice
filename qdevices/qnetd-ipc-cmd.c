@@ -284,10 +284,9 @@ qnetd_ipc_cmd_list(struct qnetd_instance *instance, struct dynar *outbuf, int ve
 {
 	struct qnetd_cluster *cluster;
 	struct qnetd_client *client;
-	size_t cluster_no, client_no;
+	size_t client_no;
 	const char *kap_tb_str;		/* Keep active partition tie breaker string */
 
-	cluster_no = 0;
 	TAILQ_FOREACH(cluster, &instance->clusters, entries) {
 		if (cluster_name != NULL && strcmp(cluster_name, "") != 0 &&
 		    strcmp(cluster_name, cluster->cluster_name) != 0) {
@@ -326,8 +325,6 @@ qnetd_ipc_cmd_list(struct qnetd_instance *instance, struct dynar *outbuf, int ve
 
 			client_no++;
                 }
-
-                cluster_no++;
 	}
 
 	return (0);
