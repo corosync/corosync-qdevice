@@ -234,7 +234,6 @@ WARNLIST="
 	missing-prototypes
 	missing-declarations
 	strict-prototypes
-	declaration-after-statement
 	pointer-arith
 	write-strings
 	cast-align
@@ -245,7 +244,6 @@ WARNLIST="
 	format-nonliteral
 	no-long-long
 	unsigned-char
-	gnu89-inline
 	no-strict-aliasing
 	"
 
