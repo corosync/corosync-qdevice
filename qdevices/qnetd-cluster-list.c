@@ -114,6 +114,7 @@ qnetd_cluster_list_add_client(struct qnetd_cluster_list *list, struct qnetd_clie
 		/*
 		 * Coverity reports false positive var_deref_op error on following line
 		 */
+		// coverity[FORWARD_NULL:SUPPRESS] false positive
 		TAILQ_INSERT_TAIL(&cluster->client_list, client, cluster_entries);
 	}
 

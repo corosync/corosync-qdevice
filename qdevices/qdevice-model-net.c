@@ -374,6 +374,7 @@ qdevice_model_net_post_poll_loop(struct qdevice_instance *instance,
 		 * Coverity reports weak_crypto error on following line, what's not a problem
 		 * because cryptographically secure pseudorandom number generator is not needed.
 		 */
+		// coverity[DC.WEAK_CRYPTO:SUPPRESS] random is not used in a security context
 		delay_before_reconnect = random() %
 		    (int)(net_instance->cast_vote_timer_interval * 0.9);
 
