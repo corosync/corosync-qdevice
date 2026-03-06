@@ -32,6 +32,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stddef.h>
 #include "log.h"
 #include "log-common.h"
 #include "utils.h"
