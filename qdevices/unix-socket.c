@@ -44,6 +44,11 @@
 #include "unix-socket.h"
 #include "utils.h"
 
+/* On Solaris/illumos, GCC predefines "sun" as a numeric macro for platform
+ * detection, which conflicts with the local variable name "sun" used for
+ * struct sockaddr_un. */
+#undef sun
+
 int
 unix_socket_server_create(const char *path, int set_socket_umask, mode_t socket_umask,
     gid_t socket_gid, int non_blocking, int backlog)

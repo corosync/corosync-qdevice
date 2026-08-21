@@ -85,6 +85,15 @@ AC_ARG_WITH([bash],
   [BASHPATH="$withval"],
   [AC_PATH_PROG([BASHPATH], [bash])])
 AC_CHECK_PROGS([GROFF], [groff])
+if test -n "$GROFF"; then
+	AC_MSG_CHECKING([whether groff supports HTML output])
+	if echo '.TH test 1' | $GROFF -mandoc -Thtml >/dev/null 2>&1; then
+		AC_MSG_RESULT([yes])
+	else
+		AC_MSG_RESULT([no])
+		GROFF=""
+	fi
+fi
 
 # Checks for typedefs.
 AC_TYPE_UID_T
@@ -100,6 +109,11 @@ AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
 # Checks for libraries.
+
+# On Solaris/illumos, socket functions live in libsocket and gethostbyname in libnsl
+AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([gethostbyname], [nsl])
+
 PKG_CHECK_MODULES([nss],[nss])
 PKG_CHECK_MODULES([corosync_common], [libcorosync_common])
 PKG_CHECK_MODULES([cmap], [libcmap])
