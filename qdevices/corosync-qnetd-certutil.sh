@@ -56,8 +56,9 @@ errx() {
 }
 
 usage() {
-    echo "$0: [-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
+    echo "$0: [-I|-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
     echo
+    echo " -I                  Generate and add another QNetd CA and new server certificate"
     echo " -i                  Initialize QNetd CA and generate server certificate"
     echo " -s                  Sign cluster certificate (needs cluster certificate)"
     echo " -C ca_nickname      NSS database QNetd CA certificate nickname"
@@ -149,6 +150,41 @@ get_certutil_key_params() {
     echo "$CERTUTIL_PARAMS"
 }
 
+nss_nickname_exists() {
+    certutil -L -d "$DB_DIR" -n "$1" >/dev/null 2>&1
+}
+
+add_qnetd_ca() {
+    cert_files=`find_certdb_files`
+    if [ "$cert_files" == "" ];then
+        errx 1 "Certificate database doesn't exist. Use $0 -i to create it"
+    fi
+
+    if nss_nickname_exists "$CA_NICKNAME";then
+        errx 1 "Certificate nickname \"$CA_NICKNAME\" already exists in the database."
+    fi
+
+    if nss_nickname_exists "$SERVER_NICKNAME";then
+        errx 1 "Certificate nickname \"$SERVER_NICKNAME\" already exists in the database."
+    fi
+
+    echo "Creating new CA"
+    # Create self-signed certificate (CA). Asks 3 questions (is this CA, lifetime and critical extension
+    echo -e "y\n0\ny\n" | certutil -S -n "$CA_NICKNAME" -s "$CA_SUBJECT" -x \
+        -t "CT,," -m "$(get_serial_no)" -v $CRT_VALIDITY -d "$DB_DIR" \
+        -z "$NOISE_FILE" -f "$PWD_FILE" -2 $(get_certutil_key_params)
+
+    # Export CA certificate in ascii
+    certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" > "$CA_EXPORT_FILE"
+    certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" -a >> "$CA_EXPORT_FILE"
+    chown_ref_cfgdir "$CA_EXPORT_FILE"
+
+    certutil -S -n "$SERVER_NICKNAME" -s "$SERVER_SUBJECT" -c "$CA_NICKNAME" -t "u,u,u" -m "$(get_serial_no)" \
+        -v $CRT_VALIDITY -d "$DB_DIR" -z "$NOISE_FILE" -f "$PWD_FILE" $(get_certutil_key_params)
+
+    echo "QNetd CA certificate is exported as $CA_EXPORT_FILE"
+}
+
 init_qnetd_ca() {
     cert_files=`find_certdb_files`
     if [ "$cert_files" != "" ];then
@@ -180,21 +216,7 @@ init_qnetd_ca() {
 
     create_new_noise_file "$NOISE_FILE"
 
-    echo "Creating new CA"
-    # Create self-signed certificate (CA). Asks 3 questions (is this CA, lifetime and critical extension
-    echo -e "y\n0\ny\n" | certutil -S -n "$CA_NICKNAME" -s "$CA_SUBJECT" -x \
-        -t "CT,," -m "$(get_serial_no)" -v $CRT_VALIDITY -d "$DB_DIR" \
-        -z "$NOISE_FILE" -f "$PWD_FILE" -2 $(get_certutil_key_params)
-
-    # Export CA certificate in ascii
-    certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" > "$CA_EXPORT_FILE"
-    certutil -L -d "$DB_DIR" -n "$CA_NICKNAME" -a >> "$CA_EXPORT_FILE"
-    chown_ref_cfgdir "$CA_EXPORT_FILE"
-
-    certutil -S -n "$SERVER_NICKNAME" -s "$SERVER_SUBJECT" -c "$CA_NICKNAME" -t "u,u,u" -m "$(get_serial_no)" \
-        -v $CRT_VALIDITY -d "$DB_DIR" -z "$NOISE_FILE" -f "$PWD_FILE" $(get_certutil_key_params)
-
-    echo "QNetd CA certificate is exported as $CA_EXPORT_FILE"
+    add_qnetd_ca
 }
 
 
@@ -230,8 +252,11 @@ CERTIFICATE_FILE=""
 CLUSTER_NAME=""
 SET_GROUP_WRITE_BIT=true
 
-while getopts ":GhisC:c:g:k:n:q:S:" opt; do
+while getopts ":IGhisC:c:g:k:n:q:S:" opt; do
     case $opt in
+        I)
+            OPERATION=add_qnetd_ca
+            ;;
         i)
             OPERATION=init_qnetd_ca
             ;;
@@ -281,6 +306,9 @@ CRT_FILE="$DB_DIR/cluster-$CLUSTER_NAME.crt"
 CA_SUBJECT="CN=$CA_NICKNAME"
 
 case "$OPERATION" in
+    "add_qnetd_ca")
+        add_qnetd_ca
+    ;;
     "init_qnetd_ca")
         init_qnetd_ca
     ;;
