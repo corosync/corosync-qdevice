@@ -35,7 +35,7 @@
 .SH NAME
 corosync-qnetd-certutil - tool to generate qnetd TLS certificates
 .SH SYNOPSIS
-.B "corosync-qnetd-certutil [-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
+.B "corosync-qnetd-certutil [-I|-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
 .SH DESCRIPTION
 .B corosync-qnetd-certutil
 is a frontend for the NSS certutil, it is used for generating the QNetd CA (Certificate Authority), 
@@ -43,6 +43,10 @@ server certificate and signing cluster certificate used by
 .B corosync-qdevice
 when using the model 'net'.
 .SH OPTIONS
+.TP
+.B -I
+Generate and add another QNetd CA and a new server certificate. Both the CA
+and server nicknames must be unique.
 .TP
 .B -i
 Initialize the QNetd NSS certificate database and generate the QNetd CA and server certificates.
