@@ -31,11 +31,11 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QNETD-CERTUTIL 8 2026-07-01
+.TH COROSYNC-QNETD-CERTUTIL 8 2026-11-10
 .SH NAME
 corosync-qnetd-certutil - tool to generate qnetd TLS certificates
 .SH SYNOPSIS
-.B "corosync-qnetd-certutil [-i|-s] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset]"
+.B "corosync-qnetd-certutil [-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
 .SH DESCRIPTION
 .B corosync-qnetd-certutil
 is a frontend for the NSS certutil, it is used for generating the QNetd CA (Certificate Authority), 
@@ -48,13 +48,22 @@ when using the model 'net'.
 Initialize the QNetd NSS certificate database and generate the QNetd CA and server certificates.
 The default directory for the database is /etc/corosync/qnetd. This directory must be
 writeable by the current user. The QNetd CA certificate is also exported into the file
-/etc/corosync/qnetd/nssdb/qnetd-cacert.crt.
+/etc/corosync/qnetd/nssdb/qnetd-cacert.crt (or
+/etc/corosync/qnetd/nssdb/qnetd-cacert-\fIca_nickname\fR.crt if
+.B -C
+is used).
 .TP
 .B -s
 Sign the cluster certificate. It is necessary to pass the cluster name (as
 configured in corosync.conf) and the certificate request file - see options below.
 The signed certificate will be written to the 
-file /etc/corosync/qnetd/nssdb/cluster-$ClusterName.crt
+file /etc/corosync/qnetd/nssdb/cluster-\fIClusterName\fR.crt
+.TP
+.B -C
+NSS certificate database nickname of the new CA or the CA used to sign the
+certificate request. It also changes the name of the exported QNetd CA file
+and the Common Name (CN) of the certificate.
+If not specified, the default "QNet CA" is used.
 .TP
 .B -c
 Certificate request file to sign.
@@ -103,6 +112,9 @@ command. By default, this is left empty, meaning
 is not passed to
 .B certutil
 at all.
+.TP
+.B -S
+NSS certificate database nickname of the new QNetd Server certificate. If not specified, the default "QNetd Cert" is used.
 .SH NOTES
 If qnetd is executed by a non root user, /etc/corosync/qnetd and its subdirectories must be owned by (or have group access for) the given user. If
 .B corosync-qnetd-certutil

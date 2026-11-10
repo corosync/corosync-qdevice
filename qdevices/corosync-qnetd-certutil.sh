@@ -40,7 +40,6 @@ DB_DIR="$CONFIG_DIR/nssdb"
 CRT_VALIDITY=1200
 CA_NICKNAME="QNet CA"
 SERVER_NICKNAME="QNetd Cert"
-CA_SUBJECT="CN=QNet CA"
 SERVER_SUBJECT="CN=Qnetd Server"
 PWD_FILE="$DB_DIR/pwdfile.txt"
 NOISE_FILE="$DB_DIR/noise.txt"
@@ -57,16 +56,18 @@ errx() {
 }
 
 usage() {
-    echo "$0: [-i|-s] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset]"
+    echo "$0: [-i|-s] [-C ca_nickname] [-c certificate] [-G] [-g keysize] [-k keytype] [-n cluster_name] [-q paramset] [-S serv_nickname]"
     echo
     echo " -i                  Initialize QNetd CA and generate server certificate"
     echo " -s                  Sign cluster certificate (needs cluster certificate)"
+    echo " -C ca_nickname      NSS database QNetd CA certificate nickname"
     echo " -c certificate      CRQ certificate file name"
     echo " -G                  Do not set group write bit for new files"
     echo " -g keysize          Key size in bits - passed directly to certutil as -g parameter"
     echo " -k keytype          Type of key - passed directly to certutil as -k parameter"
     echo " -n cluster_name     Name of cluster (for -s operation)"
     echo " -q paramset         Parameter set (curve name, ml-dsa set) - passed directly to certutil as -q parameter"
+    echo " -S serv_nickname    NSS database QNetd server certificate nickname"
 
     exit 0
 }
@@ -229,7 +230,7 @@ CERTIFICATE_FILE=""
 CLUSTER_NAME=""
 SET_GROUP_WRITE_BIT=true
 
-while getopts ":Ghisc:g:k:n:q:" opt; do
+while getopts ":GhisC:c:g:k:n:q:S:" opt; do
     case $opt in
         i)
             OPERATION=init_qnetd_ca
@@ -239,6 +240,10 @@ while getopts ":Ghisc:g:k:n:q:" opt; do
             ;;
         h)
             usage
+            ;;
+        C)
+            CA_NICKNAME="$OPTARG"
+            CA_EXPORT_FILE="$DB_DIR/qnetd-cacert-$CA_NICKNAME.crt"
             ;;
         c)
             CERTIFICATE_FILE="$OPTARG"
@@ -258,6 +263,9 @@ while getopts ":Ghisc:g:k:n:q:" opt; do
         q)
             COROSYNC_QNETD_CERTUTIL_PARAMSET="$OPTARG"
             ;;
+        S)
+            SERVER_NICKNAME="$OPTARG"
+            ;;
         \?)
             errx 1 "Invalid option: -$OPTARG"
             ;;
@@ -270,6 +278,7 @@ done
 [ "$OPERATION" == "" ] && usage
 
 CRT_FILE="$DB_DIR/cluster-$CLUSTER_NAME.crt"
+CA_SUBJECT="CN=$CA_NICKNAME"
 
 case "$OPERATION" in
     "init_qnetd_ca")
