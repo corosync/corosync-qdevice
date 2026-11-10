@@ -34,6 +34,8 @@
 
 #include <sys/types.h>
 
+#include <assert.h>
+
 #include <pk11func.h>
 #include "log.h"
 #include "qnetd-instance.h"
@@ -92,6 +94,20 @@ qnetd_instance_init(struct qnetd_instance *instance,
 
 	instance->advanced_settings = advanced_settings;
 
+	instance->server.no_certs = instance->advanced_settings->no_cert_nicknames;
+
+	instance->server.certs = calloc(instance->server.no_certs,
+	    sizeof(CERTCertificate *));
+	if (instance->server.certs == NULL) {
+		goto error_exit;
+	}
+
+	instance->server.private_keys = calloc(instance->server.no_certs,
+	    sizeof(SECKEYPrivateKey *));
+	if (instance->server.private_keys == NULL) {
+		goto error_free_certs;
+	}
+
 	qnetd_client_list_init(&instance->clients);
 	qnetd_cluster_list_init(&instance->clusters);
 
@@ -107,10 +123,19 @@ qnetd_instance_init(struct qnetd_instance *instance,
 	    instance, NULL) == -1) {
 		log(LOG_ERR, "Can't add instance pre poll loop cb");
 
-		return (-1);
+		goto error_free_private_keys;
 	}
 
 	return (0);
+
+error_free_private_keys:
+	free(instance->server.private_keys);
+
+error_free_certs:
+	free(instance->server.certs);
+
+error_exit:
+	return (-1);
 }
 
 int
@@ -137,6 +162,9 @@ qnetd_instance_destroy(struct qnetd_instance *instance)
 	}
 
 	pr_poll_loop_destroy(&instance->main_poll_loop);
+
+	free(instance->server.private_keys);
+	free(instance->server.certs);
 
 	return (0);
 }
@@ -165,16 +193,22 @@ qnetd_instance_client_disconnect(struct qnetd_instance *instance, struct qnetd_c
 int
 qnetd_instance_init_certs(struct qnetd_instance *instance)
 {
+	size_t zi;
 
-	instance->server.cert = PK11_FindCertFromNickname(
-	    instance->advanced_settings->cert_nickname, NULL);
-	if (instance->server.cert == NULL) {
-		return (-1);
-	}
+	assert(instance->advanced_settings->no_cert_nicknames == instance->server.no_certs);
 
-	instance->server.private_key = PK11_FindKeyByAnyCert(instance->server.cert, NULL);
-	if (instance->server.private_key == NULL) {
-		return (-1);
+	for (zi = 0; zi < instance->advanced_settings->no_cert_nicknames; zi++) {
+		instance->server.certs[zi] = PK11_FindCertFromNickname(
+		    instance->advanced_settings->cert_nicknames[zi], NULL);
+		if (instance->server.certs[zi] == NULL) {
+			return (-1);
+		}
+
+		instance->server.private_keys[zi] =
+		    PK11_FindKeyByAnyCert(instance->server.certs[zi], NULL);
+		if (instance->server.private_keys[zi] == NULL) {
+			return (-1);
+		}
 	}
 
 	return (0);

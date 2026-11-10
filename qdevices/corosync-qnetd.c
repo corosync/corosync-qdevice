@@ -345,6 +345,7 @@ main(int argc, char * const argv[])
 	enum tlv_tls_supported tls_supported;
 	int client_cert_required;
 	size_t max_clients;
+	size_t zi;
 	PRIntn address_family;
 	int lock_file;
 	int another_instance_running;
@@ -357,6 +358,10 @@ main(int argc, char * const argv[])
 
 	cli_parse(argc, argv, &host_addr, &host_port, &foreground, &debug_log, &bump_log_priority,
 	    &tls_supported, &client_cert_required, &max_clients, &address_family, &advanced_settings);
+
+	if (qnetd_advanced_settings_post_parse(&advanced_settings) != 0) {
+		errx(EXIT_FAILURE, "Can't alloc memory for advanced settings");
+	}
 
 	log_target = LOG_TARGET_SYSLOG;
 	if (foreground) {
@@ -480,8 +485,10 @@ main(int argc, char * const argv[])
 		qnetd_warn_nss();
 	}
 
-	CERT_DestroyCertificate(instance.server.cert);
-	SECKEY_DestroyPrivateKey(instance.server.private_key);
+	for (zi = 0; zi < instance.server.no_certs; zi++) {
+		CERT_DestroyCertificate(instance.server.certs[zi]);
+		SECKEY_DestroyPrivateKey(instance.server.private_keys[zi]);
+	}
 
 	SSL_ClearSessionCache();
 

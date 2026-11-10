@@ -60,13 +60,13 @@ qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings)
 	if ((settings->nss_db_dir = strdup(QNETD_DEFAULT_NSS_DB_DIR)) == NULL) {
 		return (-1);
 	}
-	if ((settings->cert_nickname = strdup(QNETD_DEFAULT_CERT_NICKNAME)) == NULL) {
-		return (-1);
-	}
 	settings->heartbeat_interval_min = QNETD_DEFAULT_HEARTBEAT_INTERVAL_MIN;
 	settings->heartbeat_interval_max = QNETD_DEFAULT_HEARTBEAT_INTERVAL_MAX;
 	settings->dpd_enabled = QNETD_DEFAULT_DPD_ENABLED;
 	settings->dpd_interval_coefficient = QNETD_DEFAULT_DPD_INTERVAL_COEFFICIENT;
+	if ((settings->cert_nicknames = calloc(QNETD_MAX_CERTIFICATES, sizeof(char *))) == NULL) {
+		return (-1);
+	}
 	if ((settings->lock_file = strdup(QNETD_DEFAULT_LOCK_FILE)) == NULL) {
 		return (-1);
 	}
@@ -85,12 +85,32 @@ qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings)
 	return (0);
 }
 
+int
+qnetd_advanced_settings_post_parse(struct qnetd_advanced_settings *settings)
+{
+
+	if (settings->no_cert_nicknames == 0) {
+		if ((settings->cert_nicknames[settings->no_cert_nicknames] =
+		    strdup(QNETD_DEFAULT_CERT_NICKNAME)) == NULL) {
+			return (-1);
+		}
+
+		settings->no_cert_nicknames++;
+	}
+
+	return (0);
+}
+
 void
 qnetd_advanced_settings_destroy(struct qnetd_advanced_settings *settings)
 {
+	size_t zi;
 
 	free(settings->nss_db_dir);
-	free(settings->cert_nickname);
+	for (zi = 0; zi < settings->no_cert_nicknames; zi++) {
+		free(settings->cert_nicknames[zi]);
+	}
+	free(settings->cert_nicknames);
 	free(settings->lock_file);
 	free(settings->local_socket_file);
 }
@@ -139,11 +159,15 @@ qnetd_advanced_settings_set(struct qnetd_advanced_settings *settings,
 			return (-1);
 		}
 	} else if (strcasecmp(option, "cert_nickname") == 0) {
-		free(settings->cert_nickname);
+		if (settings->no_cert_nicknames + 1 > QNETD_MAX_CERTIFICATES) {
+			return (-2);
+		}
 
-		if ((settings->cert_nickname = strdup(value)) == NULL) {
+		if ((settings->cert_nicknames[settings->no_cert_nicknames] = strdup(value)) == NULL) {
 			return (-1);
 		}
+
+		settings->no_cert_nicknames++;
 	} else if (strcasecmp(option, "heartbeat_interval_min") == 0) {
 		if (utils_strtonum(value, QNETD_MIN_HEARTBEAT_INTERVAL, UINT32_MAX, &tmpll) == -1) {
 			return (-2);

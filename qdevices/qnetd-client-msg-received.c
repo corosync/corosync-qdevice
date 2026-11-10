@@ -237,8 +237,9 @@ qnetd_client_msg_received_starttls(struct qnetd_instance *instance, struct qnetd
 		return (0);
 	}
 
-	if ((new_pr_fd = nss_sock_start_ssl_as_server(client->socket, instance->server.cert,
-	    instance->server.private_key, instance->tls_client_cert_required, 0, NULL)) == NULL) {
+	if ((new_pr_fd = nss_sock_start_ssl_as_server(client->socket,
+	    instance->server.no_certs, instance->server.certs, instance->server.private_keys,
+	    instance->tls_client_cert_required, 0, NULL)) == NULL) {
 		log_nss(LOG_ERR, "Can't start TLS. Disconnecting client.");
 
 		return (-1);
