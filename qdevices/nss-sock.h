@@ -73,8 +73,8 @@ extern PRFileDesc	*nss_sock_start_ssl_as_client(PRFileDesc *input_sock, const ch
     int force_handshake, int *reset_would_block);
 
 extern PRFileDesc	*nss_sock_start_ssl_as_server(PRFileDesc *input_sock,
-    CERTCertificate *server_cert, SECKEYPrivateKey *server_key, int require_client_cert,
-    int force_handshake, int *reset_would_block);
+    size_t no_certs, CERTCertificate **server_certs, SECKEYPrivateKey **server_keys,
+    int require_client_cert, int force_handshake, int *reset_would_block);
 
 extern int		 nss_sock_non_blocking_client_init(const char *host_name,
     uint16_t port, PRIntn af, struct nss_sock_non_blocking_client *client);

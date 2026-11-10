@@ -47,7 +47,8 @@ struct qnetd_advanced_settings {
 	size_t max_client_send_size;
 	size_t max_client_receive_size;
 	char *nss_db_dir;
-	char *cert_nickname;
+	size_t no_cert_nicknames;
+	char **cert_nicknames;
 	uint32_t heartbeat_interval_min;
 	uint32_t heartbeat_interval_max;
 	uint8_t dpd_enabled;
@@ -65,6 +66,8 @@ struct qnetd_advanced_settings {
 };
 
 extern int		qnetd_advanced_settings_init(struct qnetd_advanced_settings *settings);
+
+extern int		qnetd_advanced_settings_post_parse(struct qnetd_advanced_settings *settings);
 
 extern int		qnetd_advanced_settings_set(struct qnetd_advanced_settings *settings,
     const char *option, const char *value);

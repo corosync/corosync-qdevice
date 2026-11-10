@@ -57,8 +57,9 @@ extern "C" {
 struct qnetd_instance {
 	struct {
 		PRFileDesc *socket;
-		CERTCertificate *cert;
-		SECKEYPrivateKey *private_key;
+		size_t no_certs;
+		CERTCertificate **certs;
+		SECKEYPrivateKey **private_keys;
 	} server;
 	size_t max_clients;
 	struct qnetd_client_list clients;

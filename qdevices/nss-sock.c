@@ -461,11 +461,13 @@ nss_sock_start_ssl_as_client(PRFileDesc *input_sock, const char *ssl_url,
 }
 
 PRFileDesc *
-nss_sock_start_ssl_as_server(PRFileDesc *input_sock, CERTCertificate *server_cert,
-    SECKEYPrivateKey *server_key, int require_client_cert, int force_handshake,
+nss_sock_start_ssl_as_server(PRFileDesc *input_sock,
+    size_t no_certs, CERTCertificate **server_certs, SECKEYPrivateKey **server_keys,
+    int require_client_cert, int force_handshake,
     int *reset_would_block)
 {
 	PRFileDesc *ssl_sock;
+	size_t zi;
 
 	if (force_handshake) {
 		*reset_would_block = 0;
@@ -476,8 +478,10 @@ nss_sock_start_ssl_as_server(PRFileDesc *input_sock, CERTCertificate *server_cer
 		return (NULL);
 	}
 
-	if (SSL_ConfigServerCert(ssl_sock, server_cert, server_key, NULL, 0) != SECSuccess) {
-		return (NULL);
+	for (zi = 0; zi < no_certs; zi++) {
+		if (SSL_ConfigServerCert(ssl_sock, server_certs[zi], server_keys[zi], NULL, 0) != SECSuccess) {
+			return (NULL);
+		}
 	}
 
 	if ((SSL_OptionSet(ssl_sock, SSL_SECURITY, PR_TRUE) != SECSuccess) ||

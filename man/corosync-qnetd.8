@@ -31,7 +31,7 @@
 .\" * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" * THE POSSIBILITY OF SUCH DAMAGE.
 .\" */
-.TH COROSYNC-QNETD 8 2025-10-16
+.TH COROSYNC-QNETD 8 2025-11-10
 .SH NAME
 corosync-qnetd \- QNet daemon
 .SH SYNOPSIS
@@ -205,7 +205,10 @@ allowed message size received by client). (32768)
 NSS database directory. (/etc/corosync/qnetd/nssdb)
 .TP
 .B cert_nickname
-NSS nickname of qnetd server certificate. (QNetd Cert)
+NSS database nickname of the QNetd server certificate.
+This option can be specified multiple times to configure multiple certificates.
+Order matters; preferred certificates should be specified first.
+If this option is specified, the default value is ignored.  (QNetd Cert)
 .TP
 .B heartbeat_interval_min
 Minimum heartbeat timeout accepted by server in ms. (1000)
