@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 Red Hat, Inc.
+ * Copyright (c) 2015-2026 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -35,6 +35,7 @@
 #include <poll.h>
 
 #include "log.h"
+#include "log-corosync.h"
 #include "qdevice-config.h"
 #include "qdevice-votequorum.h"
 #include "qdevice-model.h"
@@ -47,9 +48,10 @@ qdevice_votequorum_quorum_notify_callback(votequorum_handle_t votequorum_handle,
 {
 	struct qdevice_instance *instance;
 	uint32_t u32;
+	cs_error_t res;
 
-	if (votequorum_context_get(votequorum_handle, (void **)&instance) != CS_OK) {
-		log(LOG_CRIT, "Fatal error. Can't get votequorum context");
+	if ((res = votequorum_context_get(votequorum_handle, (void **)&instance)) != CS_OK) {
+		log_corosync(LOG_CRIT, res, "Fatal error. Can't get votequorum context");
 		exit(EXIT_FAILURE);
 	}
 
@@ -119,9 +121,10 @@ qdevice_votequorum_node_list_notify_callback(votequorum_handle_t votequorum_hand
 {
 	struct qdevice_instance *instance;
 	uint32_t u32;
+	cs_error_t res;
 
-	if (votequorum_context_get(votequorum_handle, (void **)&instance) != CS_OK) {
-		log(LOG_CRIT, "Fatal error. Can't get votequorum context");
+	if ((res = votequorum_context_get(votequorum_handle, (void **)&instance)) != CS_OK) {
+		log_corosync(LOG_CRIT, res, "Fatal error. Can't get votequorum context");
 		exit(EXIT_FAILURE);
 	}
 
@@ -173,9 +176,10 @@ qdevice_votequorum_expected_votes_notify_callback(votequorum_handle_t votequorum
     uint64_t context, uint32_t expected_votes)
 {
 	struct qdevice_instance *instance;
+	cs_error_t res;
 
-	if (votequorum_context_get(votequorum_handle, (void **)&instance) != CS_OK) {
-		log(LOG_CRIT, "Fatal error. Can't get votequorum context");
+	if ((res = votequorum_context_get(votequorum_handle, (void **)&instance)) != CS_OK) {
+		log_corosync(LOG_CRIT, res, "Fatal error. Can't get votequorum context");
 		exit(EXIT_FAILURE);
 	}
 
@@ -219,24 +223,24 @@ qdevice_votequorum_init(struct qdevice_instance *instance)
 	}
 
 	if (res != CS_OK) {
-		log(LOG_CRIT, "Failed to initialize the votequorum API. Error %s", cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Failed to initialize the votequorum API");
 		exit(EXIT_FAILURE);
 	}
 
 	if ((res = votequorum_qdevice_register(votequorum_handle,
 	    instance->advanced_settings->votequorum_device_name)) != CS_OK) {
-		log(LOG_CRIT, "Can't register votequorum device. Error %s", cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Can't register votequorum device");
 		exit(EXIT_FAILURE);
 	}
 
 	if ((res = votequorum_context_set(votequorum_handle, (void *)instance)) != CS_OK) {
-		log(LOG_CRIT, "Can't set votequorum context. Error %s", cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Can't set votequorum context");
 		exit(EXIT_FAILURE);
 	}
 
 	if ((res = votequorum_getinfo(votequorum_handle, VOTEQUORUM_QDEVICE_NODEID,
 	    &vq_info)) != CS_OK) {
-		log(LOG_CRIT, "Can't get votequorum information. Error %s", cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Can't get votequorum information");
 		exit(EXIT_FAILURE);
 	}
 	instance->vq_expected_votes = vq_info.node_expected_votes;
@@ -247,8 +251,7 @@ qdevice_votequorum_init(struct qdevice_instance *instance)
 
 	if ((res = votequorum_trackstart(instance->votequorum_handle, 0,
 	    CS_TRACK_CHANGES)) != CS_OK) {
-		log(LOG_CRIT, "Can't start tracking votequorum changes. Error %s",
-		    cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Can't start tracking votequorum changes");
 		exit(EXIT_FAILURE);
 	}
 
@@ -269,20 +272,19 @@ qdevice_votequorum_destroy(struct qdevice_instance *instance)
 
 	res = votequorum_trackstop(instance->votequorum_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't stop tracking votequorum changes. Error %s",
-		    cs_strerror(res));
+		log_corosync(LOG_WARNING, res, "Can't stop tracking votequorum changes");
 	}
 
 	res = votequorum_qdevice_unregister(instance->votequorum_handle,
 		instance->advanced_settings->votequorum_device_name);
 
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Unable to unregister votequorum device. Error %s", cs_strerror(res));
+		log_corosync(LOG_WARNING, res, "Unable to unregister votequorum device");
 	}
 
 	res = votequorum_finalize(instance->votequorum_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Unable to finalize votequorum. Error %s", cs_strerror(res));
+		log_corosync(LOG_WARNING, res, "Unable to finalize votequorum");
 	}
 }
 
@@ -315,7 +317,7 @@ qdevice_votequorum_dispatch(struct qdevice_instance *instance)
 	res = votequorum_dispatch(instance->votequorum_handle, CS_DISPATCH_ALL);
 
 	if (res != CS_OK && res != CS_ERR_TRY_AGAIN) {
-		log(LOG_ERR, "Can't dispatch votequorum messages");
+		log_corosync(LOG_ERR, res, "Can't dispatch votequorum messages");
 
 		return (-1);
 	}
@@ -339,8 +341,7 @@ qdevice_votequorum_poll(struct qdevice_instance *instance, int cast_vote)
 		if (res == CS_ERR_MESSAGE_ERROR) {
 			log(LOG_INFO, "qdevice_votequorum_poll called with old ring id");
 		} else {
-			log(LOG_CRIT, "Can't call votequorum_qdevice_poll. Error %s",
-			    cs_strerror(res));
+			log_corosync(LOG_CRIT, res, "Can't call votequorum_qdevice_poll");
 
 			return (-1);
 		}
@@ -377,7 +378,7 @@ qdevice_votequorum_master_wins(struct qdevice_instance *instance, int allow)
 	    instance->advanced_settings->votequorum_device_name, final_allow);
 
 	if (res != CS_OK) {
-		log(LOG_CRIT, "Can't set master wins. Error %s", cs_strerror(res));
+		log_corosync(LOG_CRIT, res, "Can't set master wins");
 
 		return (-1);
 	}

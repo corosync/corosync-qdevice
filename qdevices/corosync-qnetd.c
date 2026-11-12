@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 Red Hat, Inc.
+ * Copyright (c) 2015-2026 Red Hat, Inc.
  *
  * All rights reserved.
  *

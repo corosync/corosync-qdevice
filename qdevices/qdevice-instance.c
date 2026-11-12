@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 Red Hat, Inc.
+ * Copyright (c) 2015-2026 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -36,6 +36,7 @@
 #include <stdio.h>
 
 #include "log.h"
+#include "log-corosync.h"
 #include "qdevice-config.h"
 #include "qdevice-instance.h"
 #include "qdevice-heuristics-exec-list.h"
@@ -182,8 +183,7 @@ qdevice_instance_configure_from_cmap_heuristics(struct qdevice_instance *instanc
 		 */
 		cs_err = cmap_iter_init(instance->cmap_handle, "quorum.device.heuristics.exec_", &iter_handle);
 		if (cs_err != CS_OK) {
-			log(LOG_ERR, "Can't iterate quorum.device.heuristics.exec_ keys. "
-			    "Error %s", cs_strerror(cs_err));
+			log_corosync(LOG_ERR, cs_err, "Can't iterate quorum.device.heuristics.exec_ keys");
 
 			return (-1);
 		}
@@ -259,9 +259,10 @@ int
 qdevice_instance_configure_from_cmap(struct qdevice_instance *instance)
 {
 	char *str;
+	cs_error_t cs_err;
 
-	if (cmap_get_string(instance->cmap_handle, "quorum.device.model", &str) != CS_OK) {
-		log(LOG_ERR, "Can't read quorum.device.model cmap key.");
+	if ((cs_err = cmap_get_string(instance->cmap_handle, "quorum.device.model", &str)) != CS_OK) {
+		log_corosync(LOG_ERR, cs_err, "Can't read quorum.device.model cmap key");
 
 		return (-1);
 	}
@@ -274,9 +275,9 @@ qdevice_instance_configure_from_cmap(struct qdevice_instance *instance)
 	}
 	free(str);
 
-	if (cmap_get_uint32(instance->cmap_handle, "runtime.votequorum.this_node_id",
-	    &instance->node_id) != CS_OK) {
-		log(LOG_ERR, "Unable to retrieve this node nodeid.");
+	if ((cs_err = cmap_get_uint32(instance->cmap_handle, "runtime.votequorum.this_node_id",
+	    &instance->node_id)) != CS_OK) {
+		log_corosync(LOG_ERR, cs_err, "Unable to retrieve this node nodeid");
 
 		return (-1);
 	}

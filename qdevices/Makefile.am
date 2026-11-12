@@ -1,4 +1,4 @@
-# Copyright (c) 2012-2020 Red Hat, Inc.
+# Copyright (c) 2012-2026 Red Hat, Inc.
 #
 # Authors: Jan Friesse (jfriesse@redhat.com)
 #          Fabio M. Di Nitto (fdinitto@redhat.com)
@@ -150,7 +150,8 @@ corosync_qdevice_SOURCES = corosync-qdevice.c \
                            qdevice-heuristics-result-notifier.c qdevice-heuristics-result-notifier.h \
                            log.c log.h pr-poll-loop.c pr-poll-loop.h \
                            qdevice-pr-poll-loop-cb.c qdevice-pr-poll-loop-cb.h \
-                           qdevice-pr-poll-loop.c qdevice-pr-poll-loop.h
+                           qdevice-pr-poll-loop.c qdevice-pr-poll-loop.h \
+                           log-corosync.h
 
 corosync_qdevice_tool_SOURCES = corosync-qdevice-tool.c unix-socket.c unix-socket.h dynar.c dynar.h \
                                 dynar-str.c dynar-str.h utils.c utils.h
