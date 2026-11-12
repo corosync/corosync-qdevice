@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020 Red Hat, Inc.
+ * Copyright (c) 2015-2026 Red Hat, Inc.
  *
  * All rights reserved.
  *
@@ -42,6 +42,7 @@
 #include <netdb.h>
 
 #include "log.h"
+#include "log-corosync.h"
 #include "qdevice-config.h"
 #include "qdevice-cmap.h"
 #include "qdevice-log.h"
@@ -259,11 +260,11 @@ qdevice_cmap_init(struct qdevice_instance *instance)
 	}
 
 	if (res != CS_OK) {
-		errx(EXIT_FAILURE, "Failed to initialize the cmap API. Error %s", cs_strerror(res));
+		log_corosync_errx(EXIT_FAILURE, res, "Failed to initialize the cmap API");
 	}
 
 	if ((res = cmap_context_set(instance->cmap_handle, (void *)instance)) != CS_OK) {
-		errx(EXIT_FAILURE, "Can't set cmap context. Error %s", cs_strerror(res));
+		log_corosync_errx(EXIT_FAILURE, res, "Can't set cmap context");
 	}
 
 	cmap_fd_get(instance->cmap_handle, &instance->cmap_poll_fd);
@@ -366,8 +367,8 @@ qdevice_cmap_reload_cb(cmap_handle_t cmap_handle, cmap_track_handle_t cmap_track
 	logging_prefix_str = "logging.";
 	heuristics_prefix_str = "quorum.device.heuristics.";
 
-	if (cmap_context_get(cmap_handle, (const void **)&instance) != CS_OK) {
-		log(LOG_ERR, "Fatal error. Can't get cmap context");
+	if ((cs_res = cmap_context_get(cmap_handle, (const void **)&instance)) != CS_OK) {
+		log_corosync(LOG_ERR, cs_res, "Fatal error. Can't get cmap context");
 		exit(EXIT_FAILURE);
 	}
 
@@ -443,7 +444,7 @@ qdevice_cmap_add_track(struct qdevice_instance *instance)
 	    NULL, &instance->cmap_reload_track_handle);
 
 	if (res != CS_OK) {
-		log(LOG_ERR, "Can't initialize cmap totemconfig_reload_in_progress tracking");
+		log_corosync(LOG_ERR, res, "Can't initialize cmap totemconfig_reload_in_progress tracking");
 		return (-1);
 	}
 
@@ -453,7 +454,7 @@ qdevice_cmap_add_track(struct qdevice_instance *instance)
 	    NULL, &instance->cmap_nodelist_track_handle);
 
 	if (res != CS_OK) {
-		log(LOG_ERR, "Can't initialize cmap nodelist tracking");
+		log_corosync(LOG_ERR, res, "Can't initialize cmap nodelist tracking");
 		return (-1);
 	}
 
@@ -463,7 +464,7 @@ qdevice_cmap_add_track(struct qdevice_instance *instance)
 	    NULL, &instance->cmap_logging_track_handle);
 
 	if (res != CS_OK) {
-		log(LOG_ERR, "Can't initialize logging tracking");
+		log_corosync(LOG_ERR, res, "Can't initialize logging tracking");
 		return (-1);
 	}
 
@@ -473,7 +474,7 @@ qdevice_cmap_add_track(struct qdevice_instance *instance)
 	    NULL, &instance->cmap_heuristics_track_handle);
 
 	if (res != CS_OK) {
-		log(LOG_ERR, "Can't initialize logging tracking");
+		log_corosync(LOG_ERR, res, "Can't initialize qdevice heuristics tracking");
 		return (-1);
 	}
 
@@ -487,22 +488,22 @@ qdevice_cmap_del_track(struct qdevice_instance *instance)
 
 	res = cmap_track_delete(instance->cmap_handle, instance->cmap_reload_track_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't delete cmap totemconfig_reload_in_progress tracking");
+		log_corosync(LOG_WARNING, res, "Can't delete cmap totemconfig_reload_in_progress tracking");
 	}
 
 	res = cmap_track_delete(instance->cmap_handle, instance->cmap_nodelist_track_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't delete cmap nodelist tracking");
+		log_corosync(LOG_WARNING, res, "Can't delete cmap nodelist tracking");
 	}
 
 	res = cmap_track_delete(instance->cmap_handle, instance->cmap_logging_track_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't delete cmap logging tracking");
+		log_corosync(LOG_WARNING, res, "Can't delete cmap logging tracking");
 	}
 
 	res = cmap_track_delete(instance->cmap_handle, instance->cmap_heuristics_track_handle);
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't delete cmap heuristics tracking");
+		log_corosync(LOG_WARNING, res, "Can't delete cmap heuristics tracking");
 	}
 
 	return (0);
@@ -516,7 +517,7 @@ qdevice_cmap_destroy(struct qdevice_instance *instance)
 	res = cmap_finalize(instance->cmap_handle);
 
 	if (res != CS_OK) {
-		log(LOG_WARNING, "Can't finalize cmap. Error %s", cs_strerror(res));
+		log_corosync(LOG_WARNING, res, "Can't finalize cmap");
 	}
 }
 
@@ -535,7 +536,7 @@ qdevice_cmap_dispatch(struct qdevice_instance *instance)
 	res = cmap_dispatch(instance->cmap_handle, CS_DISPATCH_ALL);
 
 	if (res != CS_OK && res != CS_ERR_TRY_AGAIN) {
-		log(LOG_ERR, "Can't dispatch cmap messages");
+		log_corosync(LOG_ERR, res, "Can't dispatch cmap messages");
 
 		return (-1);
 	}
