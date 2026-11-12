@@ -43,7 +43,7 @@
 /*
  * 64-bit variant of ntoh is not exactly standard...
  */
-#if defined(__linux__)
+#if defined(__linux__) || defined(__sun)
 #include <endian.h>
 #elif defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/endian.h>
