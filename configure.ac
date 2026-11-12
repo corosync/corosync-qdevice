@@ -101,9 +101,6 @@ AC_TYPE_SSIZE_T
 
 # Checks for libraries.
 PKG_CHECK_MODULES([nss],[nss])
-PKG_CHECK_MODULES([corosync_common], [libcorosync_common])
-PKG_CHECK_MODULES([cmap], [libcmap])
-PKG_CHECK_MODULES([votequorum], [libvotequorum])
 
 AC_CONFIG_FILES([Makefile
 		 qdevices/Makefile
@@ -185,6 +182,11 @@ AC_ARG_ENABLE([qdevices],
 	[  --disable-qdevices              : Quorum devices support ],,
 	[ enable_qdevices="yes" ])
 AM_CONDITIONAL(BUILD_QDEVICES, test x$enable_qdevices = xyes)
+if test "x${enable_qdevices}" = xyes; then
+	PKG_CHECK_MODULES([corosync_common], [libcorosync_common])
+	PKG_CHECK_MODULES([cmap], [libcmap])
+	PKG_CHECK_MODULES([votequorum], [libvotequorum])
+fi
 AC_ARG_ENABLE([qnetd],
 	[  --disable-qnetd                 : Quorum Net Daemon support ],,
 	[ enable_qnetd="yes" ])
