@@ -75,7 +75,12 @@ usage() {
 
 chown_ref_cfgdir() {
     if [ "$UID" == "0" ];then
-        chown --reference="$CONFIG_DIR" "$@" 2>/dev/null || chown "$(stat -f "%u:%g" "$CONFIG_DIR")" "$@" 2>/dev/null || return $?
+        chown --reference="$CONFIG_DIR" "$@" 2>/dev/null && return 0
+        if command -v stat >/dev/null;then
+            chown "$(stat -c "%u:%g" "$CONFIG_DIR")" "$@" 2>/dev/null && return 0
+            chown "$(stat -f "%u:%g" "$CONFIG_DIR")" "$@" 2>/dev/null && return 0
+        fi
+        chown "$(ls -nd "$CONFIG_DIR" | awk '{ print $3 ":" $4 }')" "$@" 2>/dev/null || return $?
     fi
 }
 
@@ -97,7 +102,11 @@ create_new_noise_file() {
     if [ ! -e "$noise_file" ];then
         echo "Creating new noise file $noise_file"
 
-        (ps -elf; date; w) | sha1sum | (read sha_sum rest; echo $sha_sum) > "$noise_file"
+        if command -v sha1sum >/dev/null; then
+            (ps -elf; date; w) | sha1sum | (read sha_sum rest; echo $sha_sum) > "$noise_file"
+        else
+            dd if=/dev/urandom of="$noise_file" bs=64 count=1 2>/dev/null
+        fi
 
         chown_ref_cfgdir "$noise_file"
         chmod "$(get_perm)" "$noise_file"
